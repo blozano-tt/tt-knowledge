@@ -36,7 +36,7 @@ If you add your login user to the `docker` group, log out/in before continuing.
 ## 3. Clone the public repository
 
 ```bash
-git clone https://github.com/blozano/tt-knowledge.git
+git clone https://github.com/blozano-tt/tt-knowledge.git
 cd tt-knowledge
 ```
 

@@ -33,6 +33,8 @@ services:
     volumes: *mempalace-volumes
     networks:
       - backend
+      # Allow the initial embedding-model download.
+      - edge
 
   mempalace:
     image: tt-knowledge-mempalace:local

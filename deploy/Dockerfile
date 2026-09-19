@@ -6,7 +6,7 @@ FROM ${MEMPALACE_IMAGE}
 ARG GIT_SHA=unknown
 LABEL org.opencontainers.image.title="tt-knowledge MemPalace" \
       org.opencontainers.image.description="Read-only MemPalace image built from the human-reviewed tt-knowledge corpus" \
-      org.opencontainers.image.source="https://github.com/blozano/tt-knowledge" \
+      org.opencontainers.image.source="https://github.com/blozano-tt/tt-knowledge" \
       org.opencontainers.image.revision="${GIT_SHA}"
 
 # The root .dockerignore ensures only deploy runtime files and the verified
