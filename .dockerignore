@@ -2,6 +2,7 @@
 *
 !deploy/Dockerfile
 !deploy/scripts/wait-and-mine.sh
+!deploy/scripts/public-mcp.py
 !.build/knowledge/**
 !.build/licenses/**
 !.build/sources.json

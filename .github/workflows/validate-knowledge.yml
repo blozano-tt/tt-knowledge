@@ -9,6 +9,7 @@ on:
       - 'site/**'
       - 'upstream-sources.json'
       - '.gitmodules'
+      - '.dockerignore'
       - '.github/workflows/validate-knowledge.yml'
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - 'site/**'
       - 'upstream-sources.json'
       - '.gitmodules'
+      - '.dockerignore'
       - '.github/workflows/validate-knowledge.yml'
 
 permissions:
@@ -36,6 +38,10 @@ jobs:
           python-version: '3.12'
       - name: Validate verified metadata
         run: python scripts/prepare_knowledge.py
+      - name: Validate Docker build inputs
+        # A small base exercises every COPY and the build-context allowlist.
+        # The full pinned MemPalace image is tested during deployment.
+        run: docker build -f deploy/Dockerfile --build-arg MEMPALACE_IMAGE=python:3.12-alpine -t tt-knowledge-build-check .
       - name: Test upstream source validation
         run: python -m unittest discover -s scripts/tests
       - name: Test public MCP policy
