@@ -4,7 +4,9 @@ A curated source of factual Tenstorrent knowledge, exposed to agents through a r
 
 Visit [tt-knowledge.dev](https://tt-knowledge.dev/) for an introduction, source links, and agent connection instructions. The MCP endpoint is `https://tt-knowledge.dev/mcp`; obtain its bearer token privately from the service operator.
 
-The Git repository is the source of truth. MemPalace is only the retrieval layer. The deployed index is intentionally disposable and is rebuilt from scratch from the Markdown under [`tt-knowledge/`](tt-knowledge/) whenever the corpus changes.
+[`blozano-tt/tt-knowledge`](https://github.com/blozano-tt/tt-knowledge) is the primary knowledge catalogue and source of truth for this project. It brings together curated local articles and registered upstream catalogues. `tenstorrent/tt-isa-documentation` is one such upstream catalogue; its current coverage does not define the scope of tt-knowledge. Imported documents retain their original attribution and provenance.
+
+MemPalace is only the retrieval layer. The deployed index is intentionally disposable and is rebuilt from scratch from the Markdown under [`tt-knowledge/`](tt-knowledge/) whenever the corpus changes.
 
 ## Repository layout
 

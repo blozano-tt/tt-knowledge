@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="A shared, searchable index of public Tenstorrent documentation. Connect your AI agent through a read-only MCP server."
+      content="tt-knowledge is a shared catalogue of public Tenstorrent knowledge, bringing together curated articles and registered upstream documentation for agents."
     />
     <meta name="theme-color" content="#f5f5ef" />
     <title>tt-knowledge — Public knowledge. Ready for your agent.</title>
@@ -40,15 +40,15 @@
             Public knowledge.<br />Ready for <em>your agent.</em>
           </h1>
           <p class="intro">
-            Give your agent a head start on Tenstorrent. Search public technical
-            documentation through one shared index, with sources it can follow
-            back to the original.
+            Give your agent a head start on Tenstorrent. Explore tt-knowledge, a
+            shared catalogue of public technical knowledge, with links back to
+            the documents behind each answer.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#connect"
               >Connect your agent <span aria-hidden="true">↗</span></a
             ><a class="text-link" href="#sources"
-              >Explore the sources <span aria-hidden="true">↓</span></a
+              >Explore the catalogue <span aria-hidden="true">↓</span></a
             >
           </div>
           <p class="hero-note">
@@ -58,7 +58,7 @@
         </div>
         <div
           class="index-illustration"
-          aria-label="Public documentation is indexed once and retrieved by your agent through MCP"
+          aria-label="The blozano-tt/tt-knowledge catalogue brings together curated articles and upstream documentation, indexed by MemPalace and retrieved by your agent through MCP"
         >
           <div class="diagram-top">
             <span>THE SHARED INDEX</span
@@ -68,12 +68,12 @@
             <div class="document back-one"></div>
             <div class="document back-two"></div>
             <div class="document front">
-              <span class="file-label">SOURCE / MARKDOWN</span
-              ><strong>tt-isa-documentation</strong>
+              <span class="file-label">PRIMARY CATALOGUE / BLOZANO-TT</span
+              ><strong>tt-knowledge</strong>
               <div class="doc-line long"></div>
               <div class="doc-line"></div>
-              <div class="architecture-tags">
-                <span>Wormhole</span><span>Blackhole</span>
+              <div class="catalogue-tags">
+                <span>Curated articles</span><span>Upstream catalogues</span>
               </div>
               <span class="source-stamp">repo + commit + path</span>
             </div>
@@ -82,7 +82,8 @@
           <div class="index-node">
             <span class="node-symbol" aria-hidden="true">≋</span>
             <div>
-              <strong>tt-knowledge</strong><span>Indexed with MemPalace</span>
+              <strong>MemPalace index</strong
+              ><span>Search &amp; retrieval</span>
             </div>
             <span class="node-arrow" aria-hidden="true">↗</span>
           </div>
@@ -113,41 +114,59 @@
       >
         <div class="section-heading">
           <p class="eyebrow">01 / THE KNOWLEDGE</p>
-          <h2 id="sources-title">Start with the source.</h2>
+          <h2 id="sources-title">The catalogue starts here.</h2>
           <p>
-            The repository holds the knowledge. MemPalace makes it searchable.
-            Upstream repositories are pinned to specific commits, so retrieved
-            documents keep their provenance.
+            <a href="https://github.com/blozano-tt/tt-knowledge"
+              >blozano-tt/tt-knowledge</a
+            >
+            is the primary knowledge catalogue and source of truth for this
+            project. It brings together curated articles and approved upstream
+            documentation. MemPalace makes that collection searchable.
           </p>
         </div>
         <a
           class="source-card"
-          href="https://github.com/tenstorrent/tt-isa-documentation"
+          href="https://github.com/blozano-tt/tt-knowledge"
         >
           <div class="source-card-top">
             <span class="source-icon" aria-hidden="true">{ }</span
-            ><span class="tag">UPSTREAM SOURCE</span
+            ><span class="tag">PRIMARY KNOWLEDGE SOURCE</span
             ><span class="external-arrow" aria-hidden="true">↗</span>
           </div>
-          <p class="source-owner">tenstorrent /</p>
-          <h3>tt-isa-documentation</h3>
+          <p class="source-owner">blozano-tt /</p>
+          <h3>tt-knowledge</h3>
           <p>
-            Architecture and instruction-set documentation, including Wormhole
-            and Blackhole Tensix instructions.
+            The home of the knowledge base: its curated content, registered
+            upstream catalogues, and the collection made available to agents.
           </p>
           <div class="source-card-bottom">
-            <span>Public Markdown</span><span>Browse on GitHub ↗</span>
+            <span>Project catalogue</span><span>Explore on GitHub ↗</span>
           </div>
         </a>
+        <aside class="upstream-catalogue" aria-labelledby="upstream-title">
+          <p class="eyebrow" id="upstream-title">INCLUDED UPSTREAM CATALOGUE</p>
+          <div>
+            <a href="https://github.com/tenstorrent/tt-isa-documentation"
+              >tenstorrent/tt-isa-documentation ↗</a
+            >
+            <p>
+              ISA documentation from a separate Tenstorrent catalogue, covering
+              architectures such as Wormhole and Blackhole. Included in
+              tt-knowledge as one pinned upstream source, with its original
+              attribution preserved.
+            </p>
+          </div>
+        </aside>
         <div class="source-notes">
           <p>
-            <strong>Traceable answers.</strong> Results include the upstream
-            repository, pinned commit, and document path. Check the original
-            when precision matters.
+            <strong>Traceable answers.</strong> Cite the document behind an
+            answer. Imported documents retain their original repository, pinned
+            commit, and path, alongside their place in tt-knowledge.
           </p>
           <p>
-            <strong>A growing collection.</strong> Sources join through Git and
-            are re-indexed on deployment.
+            <strong>A growing collection.</strong> Curated articles and
+            additional upstream catalogues can expand the knowledge base across
+            topics.
             <a
               href="https://github.com/blozano-tt/tt-knowledge/blob/main/upstream-sources.json"
               >View the source manifest ↗</a
@@ -292,11 +311,12 @@
             </div>
             <div class="prompt-box">
               <p id="agent-prompt">
-                For Tenstorrent architecture and ISA questions, search
-                tt-knowledge first. Retrieve the relevant documents, distinguish
-                Wormhole from Blackhole, and cite the upstream source and
-                revision. If the index does not cover the question, say so and
-                consult other sources.
+                For Tenstorrent technical questions, consult the
+                blozano-tt/tt-knowledge catalogue first. Retrieve relevant
+                documents and cite their sources. For upstream documents,
+                preserve the original repository and revision in citations. If
+                the catalogue does not cover the question, say so and consult
+                other sources.
               </p>
               <button
                 class="copy-button"
@@ -326,26 +346,27 @@
         <div class="example-grid">
           <article>
             <span class="example-number">01</span>
-            <h3>Find an instruction</h3>
+            <h3>Explore a topic</h3>
             <p>
-              “Use tt-knowledge to explain SFPMUL on Wormhole. Retrieve the
-              source document and cite it.”
+              “Search tt-knowledge for documentation relevant to my Tenstorrent
+              question. Explain what the catalogue covers and identify any
+              gaps.”
             </p>
           </article>
           <article>
             <span class="example-number">02</span>
-            <h3>Compare architectures</h3>
+            <h3>Consult an upstream source</h3>
             <p>
-              “Find the SFPMUL documentation for Wormhole and Blackhole. What
-              differences should I watch for?”
+              “Use the upstream ISA documentation in tt-knowledge to compare
+              SFPMUL on Wormhole and Blackhole. Cite the original documents.”
             </p>
           </article>
           <article>
             <span class="example-number">03</span>
             <h3>Follow the evidence</h3>
             <p>
-              “Find documentation on Tensix floating-point formats. Show which
-              source and revision support your answer.”
+              “Retrieve the documents supporting your answer. Show which are
+              from tt-knowledge itself and which come from upstream catalogues.”
             </p>
           </article>
         </div>

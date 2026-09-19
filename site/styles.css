@@ -270,12 +270,12 @@ h1 em {
   width: 82%;
   margin-top: 14px;
 }
-.architecture-tags {
+.catalogue-tags {
   display: flex;
   gap: 6px;
   margin-top: 14px;
 }
-.architecture-tags span {
+.catalogue-tags span {
   font: 9px var(--mono);
   border: 1px solid #d1d9c6;
   padding: 4px 6px;
@@ -474,6 +474,30 @@ h1 em {
 }
 .source-card-bottom span:last-child {
   color: var(--green);
+}
+.upstream-catalogue {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 85px;
+  border-left: 2px solid var(--line);
+  padding: 5px 0 5px 20px;
+}
+.upstream-catalogue .eyebrow {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 0;
+}
+.upstream-catalogue a {
+  font: 12px var(--mono);
+  color: var(--green);
+  overflow-wrap: anywhere;
+}
+.upstream-catalogue div p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 10px 0 0;
 }
 .source-notes {
   grid-column: 1/-1;
@@ -944,6 +968,10 @@ pre {
     grid-template-columns: 1fr;
     gap: 18px;
     padding-top: 20px;
+  }
+  .upstream-catalogue {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
   .source-card {
     padding: 23px;
