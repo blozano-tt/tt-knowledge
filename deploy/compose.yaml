@@ -69,8 +69,6 @@ services:
     command:
       - --transport
       - http
-      - --palace
-      - /data
       - --host
       - "0.0.0.0"
       - --port
