@@ -36,6 +36,17 @@ async def test(env_file):
         text=True).strip()
     report = {"endpoint": url, "isa_revision": revision}
     async with httpx2.AsyncClient(timeout=120) as public:
+        landing = await public.get(f"https://{domain}/")
+        landing.raise_for_status()
+        assert "text/html" in landing.headers["content-type"]
+        assert "Public knowledge." in landing.text
+        for path, content_type in (("styles.css", "text/css"),
+                                   ("site.js", "javascript"),
+                                   ("favicon.svg", "image/svg+xml")):
+            asset = await public.get(f"https://{domain}/{path}")
+            asset.raise_for_status()
+            assert content_type in asset.headers["content-type"]
+        report["public_website"] = "HTML and assets served without authentication"
         health = await public.get(f"https://{domain}/healthz")
         health.raise_for_status()
         assert health.text.strip() == "ok", health.text

@@ -2,6 +2,8 @@
 
 A curated source of factual Tenstorrent knowledge, exposed to agents through a read-only MemPalace MCP server.
 
+Visit [tt-knowledge.dev](https://tt-knowledge.dev/) for an introduction, source links, and agent connection instructions. The MCP endpoint is `https://tt-knowledge.dev/mcp`; obtain its bearer token privately from the service operator.
+
 The Git repository is the source of truth. MemPalace is only the retrieval layer. The deployed index is intentionally disposable and is rebuilt from scratch from the Markdown under [`tt-knowledge/`](tt-knowledge/) whenever the corpus changes.
 
 ## Repository layout
@@ -10,6 +12,7 @@ The Git repository is the source of truth. MemPalace is only the retrieval layer
 tt-knowledge/
 ├── tt-knowledge/          # human-reviewed Markdown corpus
 ├── deploy/                # Docker Compose deployment
+├── site/                  # public static website served by Caddy
 ├── scripts/               # repository validation
 └── .github/               # review/validation policy
 ```
@@ -32,6 +35,8 @@ The remote MemPalace server runs with `--read-only`, so agents cannot add or mut
 3. Enable a GitHub ruleset for `main` that requires pull requests and CODEOWNERS approval if you want review enforcement rather than convention alone.
 
 ## Updating production
+
+For website-only changes, follow the [static site update instructions](deploy/README.md#static-website) to avoid rebuilding the knowledge index.
 
 On the server:
 

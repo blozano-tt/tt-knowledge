@@ -4,7 +4,7 @@ This deployment targets a small public Linux VM such as an Oracle Cloud Always F
 
 - **MemPalace** for semantic retrieval and MCP over HTTP.
 - **Qdrant** as the disposable vector/text backend.
-- **Caddy** for automatic public TLS.
+- **Caddy** for automatic public TLS and the static landing page.
 - A **read-only MCP server**. The Git repository is the only write path for knowledge.
 
 The MemPalace image contains validated local articles and selected Markdown from approved upstream sources. Before building, the deployment script initializes submodules recursively and prepares `.build/knowledge`. The Docker build uses this prepared corpus; Git metadata, templates, and deployment secrets are excluded. Upstream license notices and a source manifest are retained outside the searchable corpus.
@@ -136,7 +136,24 @@ python3 -m venv /tmp/tt-knowledge-mcp-test
 /tmp/tt-knowledge-mcp-test/bin/python deploy/test-mcp.py
 ```
 
-The test uses the official MCP client against the public HTTPS endpoint. It checks TLS/health, rejects missing and incorrect bearer tokens, verifies that write calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence, never the token. Use `--report /path/to/report.json` to save it.
+The test uses the official MCP client against the public HTTPS endpoint. It checks the public landing page and assets, TLS/health, rejects missing and incorrect bearer tokens, verifies that write calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence, never the token. Use `--report /path/to/report.json` to save it.
+
+## Static website
+
+Caddy serves `/` and the explicitly listed website assets from the read-only `site/` mount. All other paths, including `/mcp` and `/healthz`, continue through the existing MemPalace reverse proxy. The public website needs no token; MCP authentication is unchanged. No additional container, build step, external fonts, or analytics service is used.
+
+Edit `site/index.html`, `site/styles.css`, or `site/site.js`. The connection examples use the current page origin in JavaScript; the HTML fallback names the public deployment at `tt-knowledge.dev`. For a fork, update the fallback URL, project links, source description, and maintainer information in the HTML too. Never put a real bearer token in a website file.
+
+For a change confined to the website and Caddy configuration, from the VM checkout:
+
+```bash
+git pull --ff-only --recurse-submodules
+docker compose -f deploy/compose.yaml --env-file deploy/.env run --rm --no-deps caddy \
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --no-deps --force-recreate caddy
+```
+
+This adds or refreshes the site mount without changing the index or token. After the mount exists, HTML/CSS/JS edits become available directly; Caddy configuration changes require a reload or recreation. Use the full update workflow below whenever corpus or application changes are included. Re-run `deploy/test-mcp.py` after changing proxy routing to verify both the public website and authenticated MCP.
 
 ## Updating the corpus
 

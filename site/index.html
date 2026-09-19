@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A shared, searchable index of public Tenstorrent documentation. Connect your AI agent through a read-only MCP server."
+    />
+    <meta name="theme-color" content="#f5f5ef" />
+    <title>tt-knowledge — Public knowledge. Ready for your agent.</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="shell topbar">
+      <a class="brand" href="/" aria-label="tt-knowledge home"
+        ><span class="brand-mark" aria-hidden="true">tt<span>↗</span></span
+        >tt-knowledge<span class="domain">.dev</span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#sources">The knowledge</a>
+        <a href="#connect">Connect</a>
+        <a class="repo-link" href="https://github.com/blozano-tt/tt-knowledge"
+          >GitHub <span aria-hidden="true">↗</span></a
+        >
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="shell hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">
+            <span class="small-cross" aria-hidden="true">✳</span> A shared
+            knowledge base for agents
+          </p>
+          <h1 id="hero-title">
+            Public knowledge.<br />Ready for <em>your agent.</em>
+          </h1>
+          <p class="intro">
+            Give your agent a head start on Tenstorrent. Search public technical
+            documentation through one shared index, with sources it can follow
+            back to the original.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#connect"
+              >Connect your agent <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#sources"
+              >Explore the sources <span aria-hidden="true">↓</span></a
+            >
+          </div>
+          <p class="hero-note">
+            Public sources <span>·</span> Read-only retrieval
+            <span>·</span> Public repository
+          </p>
+        </div>
+        <div
+          class="index-illustration"
+          aria-label="Public documentation is indexed once and retrieved by your agent through MCP"
+        >
+          <div class="diagram-top">
+            <span>THE SHARED INDEX</span
+            ><span class="diagram-id">001 / KNOWLEDGE</span>
+          </div>
+          <div class="document-stack">
+            <div class="document back-one"></div>
+            <div class="document back-two"></div>
+            <div class="document front">
+              <span class="file-label">SOURCE / MARKDOWN</span
+              ><strong>tt-isa-documentation</strong>
+              <div class="doc-line long"></div>
+              <div class="doc-line"></div>
+              <div class="architecture-tags">
+                <span>Wormhole</span><span>Blackhole</span>
+              </div>
+              <span class="source-stamp">repo + commit + path</span>
+            </div>
+          </div>
+          <div class="diagram-connector" aria-hidden="true">↓</div>
+          <div class="index-node">
+            <span class="node-symbol" aria-hidden="true">≋</span>
+            <div>
+              <strong>tt-knowledge</strong><span>Indexed with MemPalace</span>
+            </div>
+            <span class="node-arrow" aria-hidden="true">↗</span>
+          </div>
+          <div class="diagram-connector" aria-hidden="true">↓</div>
+          <div class="agent-node">
+            <span aria-hidden="true">⌘</span> Your agent
+            <span class="protocol">MCP / HTTP</span>
+          </div>
+          <p class="diagram-caption">Index once. Retrieve across sessions.</p>
+        </div>
+      </section>
+
+      <div class="shell service-strip">
+        <p>
+          <span class="status-dot" id="status-dot"></span
+          ><span id="service-status" role="status"
+            >Check service availability</span
+          >
+        </p>
+        <a href="/healthz">Health endpoint <span aria-hidden="true">↗</span></a
+        ><span class="strip-note">Bring your own MCP-compatible agent.</span>
+      </div>
+
+      <section
+        class="shell section sources-section"
+        id="sources"
+        aria-labelledby="sources-title"
+      >
+        <div class="section-heading">
+          <p class="eyebrow">01 / THE KNOWLEDGE</p>
+          <h2 id="sources-title">Start with the source.</h2>
+          <p>
+            The repository holds the knowledge. MemPalace makes it searchable.
+            Upstream repositories are pinned to specific commits, so retrieved
+            documents keep their provenance.
+          </p>
+        </div>
+        <a
+          class="source-card"
+          href="https://github.com/tenstorrent/tt-isa-documentation"
+        >
+          <div class="source-card-top">
+            <span class="source-icon" aria-hidden="true">{ }</span
+            ><span class="tag">UPSTREAM SOURCE</span
+            ><span class="external-arrow" aria-hidden="true">↗</span>
+          </div>
+          <p class="source-owner">tenstorrent /</p>
+          <h3>tt-isa-documentation</h3>
+          <p>
+            Architecture and instruction-set documentation, including Wormhole
+            and Blackhole Tensix instructions.
+          </p>
+          <div class="source-card-bottom">
+            <span>Public Markdown</span><span>Browse on GitHub ↗</span>
+          </div>
+        </a>
+        <div class="source-notes">
+          <p>
+            <strong>Traceable answers.</strong> Results include the upstream
+            repository, pinned commit, and document path. Check the original
+            when precision matters.
+          </p>
+          <p>
+            <strong>A growing collection.</strong> Sources join through Git and
+            are re-indexed on deployment.
+            <a
+              href="https://github.com/blozano-tt/tt-knowledge/blob/main/upstream-sources.json"
+              >View the source manifest ↗</a
+            >
+          </p>
+        </div>
+      </section>
+
+      <section
+        class="connect-section"
+        id="connect"
+        aria-labelledby="connect-title"
+      >
+        <div class="shell section">
+          <div class="section-heading">
+            <p class="eyebrow">02 / CONNECT</p>
+            <h2 id="connect-title">One endpoint.<br />Your choice of agent.</h2>
+            <p>
+              Add a remote MCP server in your agent’s settings. Your client
+              needs Streamable HTTP and support for a bearer token or custom
+              request headers.
+            </p>
+          </div>
+          <div class="connection-card">
+            <div class="connection-heading">
+              <span>CONNECTION DETAILS</span><span class="tag">READ-ONLY</span>
+            </div>
+            <dl class="settings">
+              <div>
+                <dt>Server name</dt>
+                <dd>tt-knowledge</dd>
+              </div>
+              <div>
+                <dt>Transport</dt>
+                <dd>Streamable HTTP</dd>
+              </div>
+              <div class="endpoint-setting">
+                <dt>Endpoint</dt>
+                <dd>
+                  <code id="endpoint">https://tt-knowledge.dev/mcp</code
+                  ><button
+                    class="copy-button"
+                    type="button"
+                    data-copy="endpoint"
+                    hidden
+                  >
+                    Copy URL
+                  </button>
+                </dd>
+              </div>
+              <div>
+                <dt>Authentication</dt>
+                <dd><code>Authorization: Bearer &lt;your-token&gt;</code></dd>
+              </div>
+            </dl>
+            <p class="token-note">
+              Get the access token directly from the person who shared this
+              service with you. Store it in your client’s private configuration,
+              not in a repository or prompt.
+            </p>
+          </div>
+          <div class="setup-guides">
+            <details>
+              <summary>
+                <span>Claude Code</span
+                ><span class="summary-hint"
+                  >Terminal setup <span aria-hidden="true">+</span></span
+                >
+              </summary>
+              <div class="guide-body">
+                <p>
+                  Replace <code>&lt;your-token&gt;</code> with your access
+                  token. User scope makes the connection available across
+                  projects.
+                </p>
+                <div class="code-heading">
+                  <span>SHELL</span
+                  ><button
+                    class="copy-button"
+                    type="button"
+                    data-copy="claude-command"
+                    hidden
+                  >
+                    Copy command
+                  </button>
+                </div>
+                <pre><code id="claude-command">claude mcp add --scope user --transport http \
+  tt-knowledge https://tt-knowledge.dev/mcp \
+  --header "Authorization: Bearer &lt;your-token&gt;"</code></pre>
+                <p>
+                  Run <code>/mcp</code> in Claude Code to check the connection.
+                  <a href="https://code.claude.com/docs/en/mcp"
+                    >Official setup documentation ↗</a
+                  >
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>
+                <span>Other MCP clients</span
+                ><span class="summary-hint"
+                  >Settings &amp; compatibility
+                  <span aria-hidden="true">+</span></span
+                >
+              </summary>
+              <div class="guide-body">
+                <ol>
+                  <li>
+                    Open the client’s MCP or tools settings and add a remote
+                    HTTP server.
+                  </li>
+                  <li>
+                    Enter the endpoint above and set the bearer token or
+                    <code>Authorization</code> header.
+                  </li>
+                  <li>
+                    Enable the connection and allow its read-only tools. Reload
+                    the agent if your client requires it.
+                  </li>
+                  <li>
+                    Look for <code>mempalace_search</code> and
+                    <code>mempalace_get_drawer</code> in its available tools.
+                  </li>
+                </ol>
+                <p>
+                  Configuration syntax differs between clients. Clients that
+                  only support local stdio servers or OAuth login need an
+                  adapter or additional integration; this endpoint uses a static
+                  bearer token.
+                </p>
+              </div>
+            </details>
+          </div>
+          <div class="agent-instruction">
+            <div>
+              <p class="eyebrow">GIVE IT A HABIT</p>
+              <h3>Tell your agent when to look here.</h3>
+              <p>
+                Add this to its persistent instructions so future sessions use
+                the connection too.
+              </p>
+            </div>
+            <div class="prompt-box">
+              <p id="agent-prompt">
+                For Tenstorrent architecture and ISA questions, search
+                tt-knowledge first. Retrieve the relevant documents, distinguish
+                Wormhole from Blackhole, and cite the upstream source and
+                revision. If the index does not cover the question, say so and
+                consult other sources.
+              </p>
+              <button
+                class="copy-button"
+                type="button"
+                data-copy="agent-prompt"
+                hidden
+              >
+                Copy instruction
+              </button>
+            </div>
+          </div>
+          <p
+            class="copy-status"
+            id="copy-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </div>
+      </section>
+
+      <section class="shell section try-section" aria-labelledby="try-title">
+        <div class="section-heading">
+          <p class="eyebrow">03 / TRY IT</p>
+          <h2 id="try-title">Ask a better first question.</h2>
+          <p>After connecting, try one of these in your agent.</p>
+        </div>
+        <div class="example-grid">
+          <article>
+            <span class="example-number">01</span>
+            <h3>Find an instruction</h3>
+            <p>
+              “Use tt-knowledge to explain SFPMUL on Wormhole. Retrieve the
+              source document and cite it.”
+            </p>
+          </article>
+          <article>
+            <span class="example-number">02</span>
+            <h3>Compare architectures</h3>
+            <p>
+              “Find the SFPMUL documentation for Wormhole and Blackhole. What
+              differences should I watch for?”
+            </p>
+          </article>
+          <article>
+            <span class="example-number">03</span>
+            <h3>Follow the evidence</h3>
+            <p>
+              “Find documentation on Tensix floating-point formats. Show which
+              source and revision support your answer.”
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="shell about-section" aria-labelledby="about-title">
+        <div>
+          <p class="eyebrow">BUILT IN THE OPEN</p>
+          <h2 id="about-title">
+            A small experiment.<br />A useful shared resource.
+          </h2>
+          <p>
+            Maintained by
+            <a href="https://github.com/blozano-tt">Bryan Lozano</a>. Built with
+            MemPalace, Qdrant, and Docker Compose. The aim is to reduce repeated
+            documentation discovery across agents and sessions.
+          </p>
+          <a class="text-link" href="https://github.com/blozano-tt/tt-knowledge"
+            >Browse the project or contribute
+            <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <div class="usage-note">
+          <h3>What “read-only” means</h3>
+          <p>
+            Agents can search and retrieve knowledge. They cannot add documents
+            or save conversation history through this MCP service.
+          </p>
+          <p>
+            Search terms still travel to the server, and operational logs may
+            include request metadata. Keep queries focused on public technical
+            information; leave out secrets and private session content.
+          </p>
+          <p>
+            This page has no analytics, cookies, or third-party assets. It is an
+            independent experiment, not an official Tenstorrent service.
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer class="shell footer">
+      <span>tt-knowledge<span class="domain">.dev</span></span
+      ><span>Public sources. Shared understanding.</span
+      ><a href="https://github.com/blozano-tt/tt-knowledge/issues"
+        >Report an issue ↗</a
+      >
+    </footer>
+  </body>
+</html>
