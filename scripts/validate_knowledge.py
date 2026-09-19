@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import re
 import sys
+import subprocess
 from pathlib import Path
+
+from upstream_sources import load_sources
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "tt-knowledge"
@@ -22,6 +25,8 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 def indexed_markdown_files() -> list[Path]:
     files: list[Path] = []
     for path in CORPUS.rglob("*.md"):
+        if path.relative_to(CORPUS).parts[0] == "upstream":
+            continue  # Registered submodules are validated at the source level.
         if path in SKIP_FILES:
             continue
         if any(part in SKIP_DIRS for part in path.relative_to(CORPUS).parts):
@@ -88,6 +93,11 @@ def validate(path: Path) -> list[str]:
 
 
 def main() -> int:
+    try:
+        sources = load_sources(ROOT)
+    except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as exc:
+        print(f"ERROR upstream sources: {exc}")
+        return 1
     failures = 0
     files = indexed_markdown_files()
 
@@ -101,7 +111,7 @@ def main() -> int:
         print(f"\nValidation failed with {failures} error(s).")
         return 1
 
-    print(f"Validated {len(files)} indexed Markdown file(s).")
+    print(f"Validated {len(files)} local Markdown file(s) and {len(sources)} pinned upstream source(s).")
     return 0
 
 

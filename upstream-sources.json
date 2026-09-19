@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "path": "tt-knowledge/upstream/tt-isa-documentation",
+      "repository": "https://github.com/tenstorrent/tt-isa-documentation.git",
+      "reason": "Tenstorrent-maintained primary ISA documentation. Source approval does not imply individual verification of every statement.",
+      "include": ["README.md", "Glossary.md", "WormholeB0/**", "BlackholeA0/**", "Miscellaneous/**"]
+    }
+  ]
+}

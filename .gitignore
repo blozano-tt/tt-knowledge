@@ -11,3 +11,6 @@ deploy/.env
 # Python
 __pycache__/
 *.pyc
+
+# Validated Docker build input; regenerated before each build.
+.build/

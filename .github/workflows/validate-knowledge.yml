@@ -4,13 +4,18 @@ on:
   pull_request:
     paths:
       - 'tt-knowledge/**'
-      - 'scripts/validate_knowledge.py'
+      - 'scripts/**'
+      - 'upstream-sources.json'
+      - '.gitmodules'
       - '.github/workflows/validate-knowledge.yml'
   push:
     branches: [main]
     paths:
       - 'tt-knowledge/**'
-      - 'scripts/validate_knowledge.py'
+      - 'scripts/**'
+      - 'upstream-sources.json'
+      - '.gitmodules'
+      - '.github/workflows/validate-knowledge.yml'
 
 permissions:
   contents: read
@@ -20,8 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Validate verified metadata
-        run: python scripts/validate_knowledge.py
+        run: python scripts/prepare_knowledge.py
+      - name: Test upstream source validation
+        run: python -m unittest discover -s scripts/tests

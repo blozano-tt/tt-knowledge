@@ -19,3 +19,7 @@ The goal of this repository is a small, high-trust corpus rather than comprehens
 - Could an agent read the sentence out of context and misinterpret it?
 - Does this conflict with an existing fact elsewhere in the corpus?
 - Is the source authoritative enough for the claim being made?
+
+## Upstream sources
+
+The per-document front-matter rules above apply to locally authored articles. Approved upstream repositories use the source registration and pinned-revision checks described in [UPSTREAM.md](UPSTREAM.md). Do not edit upstream files to add local front matter. Changes to an imported source should be made upstream, then adopted by updating its recorded submodule commit.

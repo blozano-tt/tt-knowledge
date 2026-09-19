@@ -7,7 +7,7 @@ This deployment targets a small public Linux VM such as an Oracle Cloud Always F
 - **Caddy** for automatic public TLS.
 - A **read-only MCP server**. The Git repository is the only write path for knowledge.
 
-The MemPalace image is built from this repository and contains only the verified corpus. The root `.dockerignore` excludes the corpus README, templates, Git metadata, and deployment secrets from the image.
+The MemPalace image contains validated local articles and selected Markdown from approved upstream sources. Before building, the deployment script initializes submodules recursively and prepares `.build/knowledge`. The Docker build uses this prepared corpus; Git metadata, templates, and deployment secrets are excluded. Upstream license notices and a source manifest are retained outside the searchable corpus.
 
 ## 1. Provision the VM
 
@@ -22,9 +22,9 @@ At the cloud firewall/security-list level, allow inbound:
 
 Do **not** expose Qdrant port 6333 or MemPalace port 8765 publicly. Compose keeps Qdrant on an internal Docker network and only Caddy publishes public ports.
 
-## 2. Install Docker + the Compose plugin
+## 2. Install Git, Python, Docker + the Compose plugin
 
-Install current Docker Engine and the Docker Compose plugin using Docker's official instructions for your Linux distribution. Confirm:
+Install Git and Python 3.10 or newer on the host for submodule checkout and corpus validation. Install current Docker Engine and the Docker Compose plugin using Docker's official instructions for your Linux distribution. Confirm:
 
 ```bash
 docker --version
@@ -36,7 +36,7 @@ If you add your login user to the `docker` group, log out/in before continuing.
 ## 3. Clone the public repository
 
 ```bash
-git clone https://github.com/blozano-tt/tt-knowledge.git
+git clone --recurse-submodules https://github.com/blozano-tt/tt-knowledge.git
 cd tt-knowledge
 ```
 
@@ -74,7 +74,7 @@ MEMPALACE_MCP_HTTP_TOKEN=<the generated secret>
 
 The script deliberately performs a **clean rebuild**:
 
-1. Builds `tt-knowledge-mempalace:local` from the current Git checkout.
+1. Runs `git submodule sync --recursive` and `git submodule update --init --recursive`, validates the pinned source checkouts, prepares the selected Markdown, and builds `tt-knowledge-mempalace:local`. Missing submodule contents are cloned at this step even if the original clone omitted `--recurse-submodules`.
 2. Stops MemPalace/Qdrant.
 3. Deletes the old Qdrant and MemPalace state volumes.
 4. Preserves the embedding-model cache and Caddy TLS state.
@@ -132,7 +132,7 @@ After reviewed changes land on the server's tracked branch:
 ./deploy/update.sh
 ```
 
-That performs `git pull --ff-only` followed by a complete index rebuild.
+That performs `git pull --ff-only --recurse-submodules` followed by a complete index rebuild. Submodules use the commits recorded in this repository; deployment never uses `git submodule update --remote`.
 
 ## Useful commands
 
@@ -162,3 +162,16 @@ docker compose -f deploy/compose.yaml --env-file deploy/.env stop
 ## Upgrade policy
 
 `deploy/.env.example` pins MemPalace and Qdrant versions. Upgrade those intentionally, rebuild, and test rather than silently following `latest` for the two stateful/application components.
+
+## Direct Compose builds
+
+Use `./deploy/rebuild-index.sh` for normal deployment; it fetches submodules before invoking Compose. Compose's local build context does not itself run Git. If building manually, prepare the checkout first:
+
+```bash
+git submodule sync --recursive
+git submodule update --init --recursive
+python3 scripts/prepare_knowledge.py
+docker compose -f deploy/compose.yaml --env-file deploy/.env build mempalace
+```
+
+Regenerate the prepared corpus after any local document or submodule change. Validation rejects missing, modified, or mismatched upstream checkouts. An upstream revision change must be committed in the parent repository to reach other deployments.

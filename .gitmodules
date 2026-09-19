@@ -1,0 +1,3 @@
+[submodule "tt-knowledge/upstream/tt-isa-documentation"]
+	path = tt-knowledge/upstream/tt-isa-documentation
+	url = https://github.com/tenstorrent/tt-isa-documentation.git

@@ -4,5 +4,5 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-git pull --ff-only
+git pull --ff-only --recurse-submodules
 exec "$REPO_ROOT/deploy/rebuild-index.sh"

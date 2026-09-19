@@ -34,8 +34,14 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     export GIT_SHA
     GIT_SHA="$(git rev-parse HEAD)"
 else
-    export GIT_SHA=unknown
+    echo "Deployment requires a Git checkout with pinned submodules." >&2
+    exit 1
 fi
+
+printf '\n==> Initializing pinned upstream repositories recursively\n'
+git submodule sync --recursive
+git submodule update --init --recursive
+python3 scripts/prepare_knowledge.py
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 
