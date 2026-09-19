@@ -38,13 +38,22 @@ jobs:
         run: python scripts/prepare_knowledge.py
       - name: Test upstream source validation
         run: python -m unittest discover -s scripts/tests
+      - name: Test public MCP policy
+        run: |
+          pip install jsonschema==4.26.0
+          python -m unittest discover -s deploy/tests -p 'test_public_mcp.py'
+      - name: Test public proxy limits
+        run: |
+          trap 'docker compose -f deploy/tests/compose.yaml down -v' EXIT
+          docker compose -f deploy/tests/compose.yaml up -d mempalace gateway caddy
+          docker compose -f deploy/tests/compose.yaml run --rm test
       - name: Validate deployment configuration
         env:
           DOMAIN: knowledge.example.com
-          MEMPALACE_MCP_HTTP_TOKEN: ci-placeholder-not-a-live-secret
         run: |
           bash -n deploy/rebuild-index.sh deploy/update.sh deploy/status.sh
-          python -m py_compile deploy/test-mcp.py
+          python -m py_compile deploy/test-mcp.py deploy/scripts/public-mcp.py
           node --check site/site.js
           docker compose -f deploy/compose.yaml config --quiet
           docker compose -f deploy/compose.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker compose -f deploy/compose.yaml run --rm --no-deps --entrypoint nginx gateway -t

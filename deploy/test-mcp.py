@@ -28,7 +28,6 @@ async def test(env_file):
     domain = config["DOMAIN"].strip().strip("\"'")
     if not re.fullmatch(r"[A-Za-z0-9.-]+", domain):
         raise ValueError("DOMAIN must be a hostname")
-    token = config["MEMPALACE_MCP_HTTP_TOKEN"].strip().strip("\"'")
     url = f"https://{domain}/mcp"
     root = Path(__file__).resolve().parents[1]
     revision = subprocess.check_output(
@@ -50,29 +49,31 @@ async def test(env_file):
         health = await public.get(f"https://{domain}/healthz")
         health.raise_for_status()
         assert health.text.strip() == "ok", health.text
-        for headers in ({}, {"Authorization": "Bearer intentionally-invalid"}):
-            denied = await public.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-                                       headers=headers)
-            assert denied.status_code == 401, f"Expected 401, got {denied.status_code}"
-    report.update(https_health="ok", missing_and_invalid_token="rejected")
-    async with httpx2.AsyncClient(headers={"Authorization": f"Bearer {token}"}, timeout=120) as client:
+        for path in ("/statusz", "/logstream/stream", "/sync/status"):
+            denied = await public.get(f"https://{domain}{path}")
+            assert denied.status_code == 404, (path, denied.status_code)
+        oversized = await public.post(url, content=b"x" * 16385)
+        assert oversized.status_code == 413
+    report.update(https_health="ok", access="anonymous", private_routes="blocked", body_limit="16 KiB")
+    async with httpx2.AsyncClient(timeout=120) as client:
         async with streamable_http_client(url, http_client=client) as streams:
             async with ClientSession(*streams, read_timeout_seconds=120) as session:
                 init = await session.initialize()
                 report["server"] = init.server_info.model_dump()
                 tools = await session.list_tools()
                 names = {tool.name for tool in tools.tools}
-                assert {"mempalace_search", "mempalace_get_drawer"} <= names
-                assert "mempalace_add_drawer" not in names
+                assert names == {"mempalace_search", "mempalace_get_drawer", "mempalace_list_drawers",
+                                 "mempalace_list_wings", "mempalace_list_rooms", "mempalace_get_taxonomy"}
                 report["advertised_tools"] = len(names)
-                # Empty arguments cannot create a drawer even if write protection regresses.
-                try:
-                    await session.call_tool("mempalace_add_drawer", {})
-                except MCPError as exc:
-                    assert exc.code == -32003, str(exc)
-                    report["write_dispatch"] = "refused: read-only"
-                else:
-                    raise AssertionError("Write tool was not refused at dispatch")
+                for name in ("mempalace_add_drawer", "mempalace_reconnect", "mempalace_event_wait"):
+                    # Empty arguments cannot create a drawer if protection regresses.
+                    try:
+                        await session.call_tool(name, {})
+                    except MCPError as exc:
+                        assert exc.code == -32003, str(exc)
+                    else:
+                        raise AssertionError(f"Non-public tool was not refused: {name}")
+                report["write_and_admin_dispatch"] = "refused: public read-only allowlist"
                 listing = unpack(await session.call_tool("mempalace_list_drawers",
                                                         {"wing": "tt-knowledge", "limit": 1}))
                 report["inventory"] = {key: value for key, value in listing.items()

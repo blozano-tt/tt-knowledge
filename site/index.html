@@ -186,8 +186,8 @@
             <h2 id="connect-title">One endpoint.<br />Your choice of agent.</h2>
             <p>
               Add a remote MCP server in your agent’s settings. Your client
-              needs Streamable HTTP and support for a bearer token or custom
-              request headers.
+              needs support for remote MCP over Streamable HTTP. No account,
+              token, or custom headers are required.
             </p>
           </div>
           <div class="connection-card">
@@ -219,13 +219,12 @@
               </div>
               <div>
                 <dt>Authentication</dt>
-                <dd><code>Authorization: Bearer &lt;your-token&gt;</code></dd>
+                <dd>None — public access</dd>
               </div>
             </dl>
-            <p class="token-note">
-              Get the access token directly from the person who shared this
-              service with you. Store it in your client’s private configuration,
-              not in a repository or prompt.
+            <p class="access-note">
+              Open to everyone, with shared capacity limits. If you receive
+              HTTP 429, wait at least five seconds and retry with backoff.
             </p>
           </div>
           <div class="setup-guides">
@@ -238,9 +237,10 @@
               </summary>
               <div class="guide-body">
                 <p>
-                  Replace <code>&lt;your-token&gt;</code> with your access
-                  token. User scope makes the connection available across
-                  projects.
+                  User scope makes the connection available across projects.
+                  If you previously configured a token, remove that server entry
+                  with <code>claude mcp remove --scope user tt-knowledge</code>,
+                  then add it again below.
                 </p>
                 <div class="code-heading">
                   <span>SHELL</span
@@ -254,8 +254,7 @@
                   </button>
                 </div>
                 <pre><code id="claude-command">claude mcp add --scope user --transport http \
-  tt-knowledge https://tt-knowledge.dev/mcp \
-  --header "Authorization: Bearer &lt;your-token&gt;"</code></pre>
+  tt-knowledge https://tt-knowledge.dev/mcp</code></pre>
                 <p>
                   Run <code>/mcp</code> in Claude Code to check the connection.
                   <a href="https://code.claude.com/docs/en/mcp"
@@ -279,8 +278,8 @@
                     HTTP server.
                   </li>
                   <li>
-                    Enter the endpoint above and set the bearer token or
-                    <code>Authorization</code> header.
+                    Enter the endpoint above and choose no authentication.
+                    Remove any previously configured authorization header.
                   </li>
                   <li>
                     Enable the connection and allow its read-only tools. Reload
@@ -293,9 +292,8 @@
                 </ol>
                 <p>
                   Configuration syntax differs between clients. Clients that
-                  only support local stdio servers or OAuth login need an
-                  adapter or additional integration; this endpoint uses a static
-                  bearer token.
+                  only support local stdio servers need an adapter. This endpoint
+                  supports anonymous HTTP access and has no OAuth login.
                 </p>
               </div>
             </details>

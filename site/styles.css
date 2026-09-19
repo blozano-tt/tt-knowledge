@@ -594,7 +594,7 @@ h1 em {
 .copy-button:hover {
   background: #e6eed7;
 }
-.token-note {
+.access-note {
   font-size: 11px;
   line-height: 1.7;
   color: var(--muted);
@@ -1045,7 +1045,7 @@ pre {
   .connection-heading {
     padding-inline: 17px;
   }
-  .token-note {
+  .access-note {
     padding-inline: 17px;
   }
   .settings code {

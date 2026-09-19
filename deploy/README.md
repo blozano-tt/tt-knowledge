@@ -5,6 +5,7 @@ This deployment targets a small public Linux VM such as an Oracle Cloud Always F
 - **MemPalace** for semantic retrieval and MCP over HTTP.
 - **Qdrant** as the disposable vector/text backend.
 - **Caddy** for automatic public TLS and the static landing page.
+- **Nginx** for public MCP request and concurrency limits.
 - A **read-only MCP server**. The Git repository is the only write path for knowledge.
 
 The MemPalace image contains validated local articles and selected Markdown from approved upstream sources. Before building, the deployment script initializes submodules recursively and prepares `.build/knowledge`. The Docker build uses this prepared corpus; Git metadata, templates, and deployment secrets are excluded. Upstream license notices and a source manifest are retained outside the searchable corpus.
@@ -20,7 +21,7 @@ At the cloud firewall/security-list level, allow inbound:
 - TCP 443 from the internet.
 - UDP 443 from the internet if you want HTTP/3; it is optional.
 
-Do **not** expose Qdrant port 6333 or MemPalace port 8765 publicly. Compose keeps Qdrant on an internal Docker network and only Caddy publishes public ports.
+Do **not** expose Qdrant port 6333, MemPalace port 8765, or gateway port 8080 publicly. Compose keeps Qdrant on an internal Docker network and only Caddy publishes public ports.
 
 ## 2. Install Git, Python, Docker + the Compose plugin
 
@@ -56,17 +57,15 @@ For an experiment without your own domain, an IP-based DNS service can provide a
 
 ```bash
 cp deploy/.env.example deploy/.env
-openssl rand -hex 32
 ```
 
 Edit `deploy/.env` and set:
 
 ```dotenv
 DOMAIN=knowledge.example.com
-MEMPALACE_MCP_HTTP_TOKEN=<the generated secret>
 ```
 
-`deploy/.env` is gitignored. Never commit the token.
+`deploy/.env` is gitignored. No bearer token is needed. For an existing deployment, remove the old `MEMPALACE_MCP_HTTP_TOKEN` line; Compose explicitly clears it inside the server.
 
 ## 6. Build, mine, and start
 
@@ -82,8 +81,8 @@ The script deliberately performs a **clean rebuild**:
 4. Preserves the embedding-model cache and Caddy TLS state. A network-isolated, one-shot Compose service initializes volume ownership; indexing and serving run as UID 1000. Failure to remove old index volumes aborts the rebuild.
 5. Starts empty Qdrant.
 6. Mines `/knowledge` into the `tt-knowledge` wing.
-7. Starts MemPalace with `--read-only`.
-8. Starts Caddy on ports 80/443.
+7. Starts MemPalace with `--read-only` and the public retrieval allowlist.
+8. Starts the private Nginx gateway and Caddy on ports 80/443.
 
 This guarantees the searchable corpus comes from the current checkout instead of accumulating historical/stale document versions.
 
@@ -111,24 +110,17 @@ The MCP endpoint is:
 https://knowledge.example.com/mcp
 ```
 
-and requires:
-
-```text
-Authorization: Bearer <MEMPALACE_MCP_HTTP_TOKEN>
-```
-
-For Claude Code, MemPalace documents the client shape as:
+No authentication, API key, or authorization header is required. For Claude Code:
 
 ```bash
-claude mcp add --transport http tt-knowledge https://knowledge.example.com/mcp \
-  --header "Authorization: Bearer $MEMPALACE_MCP_HTTP_TOKEN"
+claude mcp add --scope user --transport http tt-knowledge https://knowledge.example.com/mcp
 ```
 
-Other MCP clients use the same URL and bearer header.
+Other remote MCP clients use the same URL with Streamable HTTP and no authentication. Remove old bearer headers from existing client configurations. In Claude Code, remove the previous entry with `claude mcp remove --scope user tt-knowledge`, then add it again.
 
 ### End-to-end MCP test
 
-Run this on the server so its bearer token stays in the existing `deploy/.env`:
+Run this from a checkout with `DOMAIN` in `deploy/.env`:
 
 ```bash
 python3 -m venv /tmp/tt-knowledge-mcp-test
@@ -136,13 +128,13 @@ python3 -m venv /tmp/tt-knowledge-mcp-test
 /tmp/tt-knowledge-mcp-test/bin/python deploy/test-mcp.py
 ```
 
-The test uses the official MCP client against the public HTTPS endpoint. It checks the public landing page and assets, TLS/health, rejects missing and incorrect bearer tokens, verifies that write calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence, never the token. Use `--report /path/to/report.json` to save it.
+The test uses the official MCP client against the public HTTPS endpoint. It checks the public landing page and assets, TLS/health, connects without credentials, checks the public tool allowlist, blocks private routes and oversized requests, verifies that write and administrative calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence. Use `--report /path/to/report.json` to save it.
 
 ## Static website
 
-Caddy serves `/` and the explicitly listed website assets from the read-only `site/` mount. All other paths, including `/mcp` and `/healthz`, continue through the existing MemPalace reverse proxy. The public website needs no token; MCP authentication is unchanged. No additional container, build step, external fonts, or analytics service is used.
+Caddy serves `/` and the explicitly listed website assets from the read-only `site/` mount. Only `/mcp` and `/healthz` reach the private gateway. Other paths return 404, including MemPalace’s status, sync, and event-stream routes. The website has no build step, external fonts, or analytics service.
 
-Edit `site/index.html`, `site/styles.css`, or `site/site.js`. The connection examples use the current page origin in JavaScript; the HTML fallback names the public deployment at `tt-knowledge.dev`. For a fork, update the fallback URL, project links, source description, and maintainer information in the HTML too. Never put a real bearer token in a website file.
+Edit `site/index.html`, `site/styles.css`, or `site/site.js`. The connection examples use the current page origin in JavaScript; the HTML fallback names the public deployment at `tt-knowledge.dev`. For a fork, update the fallback URL, project links, source description, and maintainer information in the HTML too.
 
 For a change confined to the website and Caddy configuration, from the VM checkout:
 
@@ -153,7 +145,7 @@ docker compose -f deploy/compose.yaml --env-file deploy/.env run --rm --no-deps 
 docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --no-deps --force-recreate caddy
 ```
 
-This adds or refreshes the site mount without changing the index or token. After the mount exists, HTML/CSS/JS edits become available directly; Caddy configuration changes require a reload or recreation. Use the full update workflow below whenever corpus or application changes are included. Re-run `deploy/test-mcp.py` after changing proxy routing to verify both the public website and authenticated MCP.
+This adds or refreshes the site mount without changing the index. After the mount exists, HTML/CSS/JS edits become available directly; Caddy configuration changes require a reload or recreation. Use the full update workflow below whenever corpus or application changes are included. Re-run `deploy/test-mcp.py` after changing proxy routing to verify both the public website and anonymous MCP.
 
 ## Updating the corpus
 
@@ -172,7 +164,7 @@ That performs `git pull --ff-only --recurse-submodules` followed by a complete i
 ./deploy/status.sh
 
 # Logs
-docker compose -f deploy/compose.yaml --env-file deploy/.env logs -f mempalace caddy
+docker compose -f deploy/compose.yaml --env-file deploy/.env logs -f mempalace gateway caddy
 
 # Rebuild from the already-checked-out commit
 ./deploy/rebuild-index.sh
@@ -181,18 +173,51 @@ docker compose -f deploy/compose.yaml --env-file deploy/.env logs -f mempalace c
 docker compose -f deploy/compose.yaml --env-file deploy/.env stop
 ```
 
-## Security properties
+## Public access and traffic limits
 
-- MCP writes are disabled with MemPalace `--read-only`.
-- MCP still requires a bearer token even though the knowledge repository is public; this prevents arbitrary internet clients from consuming your compute without authorization.
-- Qdrant is not host-published.
-- Plaintext MemPalace HTTP exists only inside Docker; Caddy is the public TLS boundary.
-- Caddy certificates survive truth-index rebuilds.
-- The bearer token is stored only in `deploy/.env` on the host.
+Public access is intentional: only already-public documents belong in this deployment. Caddy terminates HTTPS and forwards `/mcp` through Nginx. The gateway is not host-published. Caddy overwrites `X-Real-IP` using the connection’s peer address, and only Caddy and the gateway share the internal ingress network. Do not publish the gateway port or accept client-supplied IP headers. If adding a CDN, configure its trusted IP ranges deliberately; otherwise clients will share the CDN’s address quota.
+
+The defaults in `deploy/nginx.conf` are:
+
+| Control | Limit |
+| --- | --- |
+| Requests per client IP | 120/minute, burst allowance 30 |
+| Requests across all clients | 300/minute, burst allowance 50 |
+| Active MCP requests per IP | 2 |
+| Active MCP requests globally | 4 |
+| Request body | 16 KiB |
+| Search results | 20 per call |
+| Drawer listing | 100 per call |
+
+Rate limits use Nginx’s leaky-bucket accounting, not fixed minute windows. Clients behind the same office or VPN address share an IP quota. Nginx returns HTTP **429** and `Retry-After: 5` when a rate or concurrency limit is hit. Agents should retry with exponential backoff. These limits protect ordinary VM capacity; they do not provide upstream protection against a large bandwidth flood.
+
+The public entrypoint additionally limits actual backend dispatch to four active requests, retaining each slot until the work finishes even if a client disconnects. Exhaustion there returns a JSON-RPC “Server busy” error. Proxy timeouts do not cancel backend work. JSON-RPC batches are rejected, argument schemas are enforced, and string lengths and pagination are bounded.
+
+Only these tools are advertised and accepted: `mempalace_search`, `mempalace_get_drawer`, `mempalace_list_drawers`, `mempalace_list_wings`, `mempalace_list_rooms`, and `mempalace_get_taxonomy`. Writes, maintenance, diary, sync, and agent-coordination tools are unavailable. The underlying server also runs with `--read-only`. Changes to the corpus happen through Git.
+
+MemPalace’s explicit no-token HTTP setting applies only inside Docker; Caddy is the public TLS boundary. The public entrypoint starts the MCP server directly, so the `serve` CLI cannot silently generate a replacement token. Qdrant and MemPalace have no host ports. Caddy certificates survive index rebuilds.
+
+Gateway access logs are disabled. Docker logs for each long-running service rotate at 10 MiB × 3. Error logs and application logs can still contain request metadata; anonymous access is not a promise of zero logging. Do not send private material in search queries.
+
+### Testing the public boundary
+
+Unit tests require `jsonschema` (also present in the pinned MemPalace image):
+
+```bash
+python -m unittest discover -s deploy/tests -p 'test_public_mcp.py'
+```
+
+The proxy integration tests use the production Caddy/Nginx configurations with a disposable backend, no public ports, and no production volumes. They check rate and concurrency limits, spoofed IP headers, request size, and route isolation:
+
+```bash
+docker compose -f deploy/tests/compose.yaml up -d mempalace gateway caddy
+docker compose -f deploy/tests/compose.yaml run --rm test
+docker compose -f deploy/tests/compose.yaml down -v
+```
 
 ## Upgrade policy
 
-`deploy/.env.example` pins MemPalace and Qdrant versions. Upgrade those intentionally, rebuild, and test rather than silently following `latest` for the two stateful/application components.
+`deploy/.env.example` pins MemPalace, Qdrant, and Nginx versions. Upgrade those intentionally, rebuild, and test rather than silently following `latest` for those components. The public entrypoint integrates with MemPalace’s dispatcher; verify it against each new MemPalace version.
 
 ## Direct Compose builds
 

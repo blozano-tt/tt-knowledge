@@ -13,8 +13,13 @@
 		file_server
 	}
 
-	# Keep MCP, health, and other application routes on the existing auth path.
+	@public_api path /mcp /healthz
+	handle @public_api {
+		reverse_proxy gateway:8080 {
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
 	handle {
-		reverse_proxy mempalace:8765
+		respond "Not found" 404
 	}
 }

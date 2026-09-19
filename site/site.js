@@ -4,7 +4,7 @@
 const endpoint = `${window.location.origin}/mcp`;
 document.getElementById("endpoint").textContent = endpoint;
 document.getElementById("claude-command").textContent =
-  `claude mcp add --scope user --transport http \\\n  tt-knowledge ${endpoint} \\\n  --header "Authorization: Bearer <your-token>"`;
+  `claude mcp add --scope user --transport http tt-knowledge ${endpoint}`;
 
 if (navigator.clipboard && window.isSecureContext) {
   document.querySelectorAll("[data-copy]").forEach((button) => {

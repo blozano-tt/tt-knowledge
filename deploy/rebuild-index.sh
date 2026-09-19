@@ -10,7 +10,7 @@ COMPOSE_FILE="$REPO_ROOT/deploy/compose.yaml"
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Missing deploy/.env" >&2
     echo "Run: cp deploy/.env.example deploy/.env" >&2
-    echo "Then set DOMAIN and MEMPALACE_MCP_HTTP_TOKEN." >&2
+    echo "Then set DOMAIN." >&2
     exit 1
 fi
 
@@ -21,12 +21,6 @@ set +a
 
 if [[ -z "${DOMAIN:-}" || "$DOMAIN" == "knowledge.example.com" ]]; then
     echo "Set a real DOMAIN in deploy/.env before deploying." >&2
-    exit 1
-fi
-
-if [[ -z "${MEMPALACE_MCP_HTTP_TOKEN:-}" || "$MEMPALACE_MCP_HTTP_TOKEN" == replace-* ]]; then
-    echo "Set MEMPALACE_MCP_HTTP_TOKEN in deploy/.env." >&2
-    echo "Generate one with: openssl rand -hex 32" >&2
     exit 1
 fi
 
@@ -71,7 +65,7 @@ printf '\n==> Mining current Git corpus from scratch\n'
 "${COMPOSE[@]}" run --rm indexer
 
 printf '\n==> Starting read-only MemPalace MCP + HTTPS proxy\n'
-"${COMPOSE[@]}" up -d mempalace caddy
+"${COMPOSE[@]}" up -d mempalace gateway caddy
 
 printf '\nDeployment complete.\n'
 printf 'Health: https://%s/healthz\n' "$DOMAIN"
