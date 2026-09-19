@@ -50,6 +50,8 @@ knowledge.example.com -> <VM public IPv4>
 
 Wait until the name resolves to the VM. Caddy will request and renew the TLS certificate automatically.
 
+For an experiment without your own domain, an IP-based DNS service can provide a hostname such as `tt-knowledge.146-235-201-105.sslip.io`. Set `DOMAIN` to the hostname using **your** VM's public IP. This depends on that DNS provider; use your own domain for a permanent deployment.
+
 ## 5. Configure the deployment
 
 ```bash
@@ -77,7 +79,7 @@ The script deliberately performs a **clean rebuild**:
 1. Runs `git submodule sync --recursive` and `git submodule update --init --recursive`, validates the pinned source checkouts, prepares the selected Markdown, and builds `tt-knowledge-mempalace:local`. Missing submodule contents are cloned at this step even if the original clone omitted `--recurse-submodules`.
 2. Stops MemPalace/Qdrant.
 3. Deletes the old Qdrant and MemPalace state volumes.
-4. Preserves the embedding-model cache and Caddy TLS state.
+4. Preserves the embedding-model cache and Caddy TLS state. A network-isolated, one-shot Compose service initializes volume ownership; indexing and serving run as UID 1000. Failure to remove old index volumes aborts the rebuild.
 5. Starts empty Qdrant.
 6. Mines `/knowledge` into the `tt-knowledge` wing.
 7. Starts MemPalace with `--read-only`.
@@ -123,6 +125,18 @@ claude mcp add --transport http tt-knowledge https://knowledge.example.com/mcp \
 ```
 
 Other MCP clients use the same URL and bearer header.
+
+### End-to-end MCP test
+
+Run this on the server so its bearer token stays in the existing `deploy/.env`:
+
+```bash
+python3 -m venv /tmp/tt-knowledge-mcp-test
+/tmp/tt-knowledge-mcp-test/bin/pip install -r deploy/requirements-test.txt
+/tmp/tt-knowledge-mcp-test/bin/python deploy/test-mcp.py
+```
+
+The test uses the official MCP client against the public HTTPS endpoint. It checks TLS/health, rejects missing and incorrect bearer tokens, verifies that write calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence, never the token. Use `--report /path/to/report.json` to save it.
 
 ## Updating the corpus
 

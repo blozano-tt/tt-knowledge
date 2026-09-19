@@ -5,6 +5,7 @@ on:
     paths:
       - 'tt-knowledge/**'
       - 'scripts/**'
+      - 'deploy/**'
       - 'upstream-sources.json'
       - '.gitmodules'
       - '.github/workflows/validate-knowledge.yml'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'tt-knowledge/**'
       - 'scripts/**'
+      - 'deploy/**'
       - 'upstream-sources.json'
       - '.gitmodules'
       - '.github/workflows/validate-knowledge.yml'
@@ -34,3 +36,11 @@ jobs:
         run: python scripts/prepare_knowledge.py
       - name: Test upstream source validation
         run: python -m unittest discover -s scripts/tests
+      - name: Validate deployment configuration
+        env:
+          DOMAIN: knowledge.example.com
+          MEMPALACE_MCP_HTTP_TOKEN: ci-placeholder-not-a-live-secret
+        run: |
+          bash -n deploy/rebuild-index.sh deploy/update.sh deploy/status.sh
+          python -m py_compile deploy/test-mcp.py
+          docker compose -f deploy/compose.yaml config --quiet

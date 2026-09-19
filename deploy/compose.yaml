@@ -12,6 +12,16 @@ x-mempalace-volumes: &mempalace-volumes
   - mempalace-cache:/data/.cache
 
 services:
+  # Repair mount-point ownership for existing volumes as well as fresh installs.
+  # Application processes continue to run as the image's non-root user.
+  volume-init:
+    image: tt-knowledge-mempalace:local
+    profiles: [tools]
+    user: "0:0"
+    network_mode: none
+    entrypoint: ["chown", "1000:1000", "/data", "/data/.cache"]
+    volumes: *mempalace-volumes
+
   qdrant:
     image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.19.1}
     restart: unless-stopped

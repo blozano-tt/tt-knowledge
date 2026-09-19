@@ -55,8 +55,14 @@ printf '\n==> Stopping query service while the truth index is rebuilt\n'
 "${COMPOSE[@]}" rm -f qdrant >/dev/null 2>&1 || true
 
 printf '\n==> Removing old searchable state (embedding cache and TLS certs are preserved)\n'
-docker volume rm tt-knowledge-qdrant-data >/dev/null 2>&1 || true
-docker volume rm tt-knowledge-mempalace-state >/dev/null 2>&1 || true
+for volume in tt-knowledge-qdrant-data tt-knowledge-mempalace-state; do
+    if docker volume inspect "$volume" >/dev/null 2>&1; then
+        docker volume rm "$volume"
+    fi
+done
+
+printf '\n==> Initializing writable state and model-cache volumes\n'
+"${COMPOSE[@]}" run --rm --no-deps volume-init
 
 printf '\n==> Starting fresh Qdrant\n'
 "${COMPOSE[@]}" up -d qdrant

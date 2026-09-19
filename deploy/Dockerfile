@@ -3,6 +3,11 @@
 ARG MEMPALACE_IMAGE=ghcr.io/mempalace/mempalace:3.10.0
 FROM ${MEMPALACE_IMAGE}
 
+# Docker seeds new named volumes from these directory ownerships.
+USER root
+RUN install -d -o 1000 -g 1000 /data/.cache
+USER 1000:1000
+
 ARG GIT_SHA=unknown
 LABEL org.opencontainers.image.title="tt-knowledge MemPalace" \
       org.opencontainers.image.description="Read-only MemPalace image built from the human-reviewed tt-knowledge corpus" \
