@@ -1,0 +1,11 @@
+# Keep the Docker build context intentionally tiny.
+*
+!deploy/Dockerfile
+!deploy/scripts/wait-and-mine.sh
+!tt-knowledge/**
+
+# These files are useful to humans but must never enter the searchable corpus.
+tt-knowledge/README.md
+tt-knowledge/.gitignore
+tt-knowledge/_templates/**
+tt-knowledge/**/.gitkeep

@@ -1,0 +1,3 @@
+# Human-only material that should not become part of the searchable corpus.
+_templates/
+README.md

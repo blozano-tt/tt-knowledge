@@ -1,0 +1,113 @@
+name: tt-knowledge
+
+x-mempalace-environment: &mempalace-environment
+  MEMPALACE_BACKEND: qdrant
+  MEMPALACE_QDRANT_URL: http://qdrant:6333
+  MEMPALACE_QDRANT_NAMESPACE: tt-knowledge
+  MEMPALACE_EMBEDDING_DEVICE: cpu
+
+x-mempalace-volumes: &mempalace-volumes
+  - mempalace-state:/data
+  # Keep downloaded embedding models across clean state rebuilds.
+  - mempalace-cache:/data/.cache
+
+services:
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.19.1}
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - backend
+
+  # One-shot tool. It is intentionally not started by a normal `compose up`.
+  # deploy/rebuild-index.sh invokes it only after wiping MemPalace/Qdrant state.
+  indexer:
+    image: tt-knowledge-mempalace:local
+    profiles: [tools]
+    depends_on:
+      - qdrant
+    entrypoint: ["/bin/sh", "/opt/tt-knowledge/wait-and-mine.sh"]
+    environment:
+      <<: *mempalace-environment
+    volumes: *mempalace-volumes
+    networks:
+      - backend
+
+  mempalace:
+    image: tt-knowledge-mempalace:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        MEMPALACE_IMAGE: ${MEMPALACE_IMAGE:-ghcr.io/mempalace/mempalace:3.10.0}
+        GIT_SHA: ${GIT_SHA:-unknown}
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    command:
+      - serve
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8765"
+      - --backend
+      - qdrant
+      - --read-only
+    environment:
+      <<: *mempalace-environment
+      MEMPALACE_MCP_HTTP_TOKEN: ${MEMPALACE_MCP_HTTP_TOKEN:?set MEMPALACE_MCP_HTTP_TOKEN in deploy/.env}
+      MEMPALACE_MCP_EXTRA_ALLOWED_HOSTS: ${DOMAIN:?set DOMAIN in deploy/.env}
+      MEMPALACE_MCP_IDLE_HOURS: "0"
+    expose:
+      - "8765"
+    volumes: *mempalace-volumes
+    networks:
+      - backend
+      - edge
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8765/healthz').read().strip()==b'ok' else sys.exit(1)"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    depends_on:
+      mempalace:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+
+networks:
+  backend:
+    internal: true
+  edge:
+
+volumes:
+  qdrant-data:
+    name: tt-knowledge-qdrant-data
+  mempalace-state:
+    name: tt-knowledge-mempalace-state
+  mempalace-cache:
+    name: tt-knowledge-mempalace-cache
+  caddy-data:
+    name: tt-knowledge-caddy-data
+  caddy-config:
+    name: tt-knowledge-caddy-config

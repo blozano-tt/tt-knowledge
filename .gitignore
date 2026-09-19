@@ -1,0 +1,13 @@
+# Local deployment secrets
+deploy/.env
+
+# OS/editor noise
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc

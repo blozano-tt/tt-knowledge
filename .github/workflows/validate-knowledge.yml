@@ -1,0 +1,27 @@
+name: Validate knowledge corpus
+
+on:
+  pull_request:
+    paths:
+      - 'tt-knowledge/**'
+      - 'scripts/validate_knowledge.py'
+      - '.github/workflows/validate-knowledge.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tt-knowledge/**'
+      - 'scripts/validate_knowledge.py'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate verified metadata
+        run: python scripts/validate_knowledge.py
