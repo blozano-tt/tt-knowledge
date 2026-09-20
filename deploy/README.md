@@ -208,7 +208,7 @@ Markdown headings start sections. Paragraphs, tables, and fenced code stay intac
 
 Upstream rooms are explicit path-prefix mappings in `upstream-sources.json`; local article rooms follow their top-level catalogue folder. The ISA source uses `wormhole-b0`, `blackhole-a0`, and `isa-shared`. Query the taxonomy tools to discover current counts. Unfiltered search warns when results span rooms.
 
-Search results default to `drawer_id`, `source_path`, `room`, `section`, `chunk_index`, `chunk_count`, and `text`. `verbose: true` adds backend scores and diagnostic metadata. Drawer retrieval and listings also support `verbose`. The alternate `cli_compatible` search output is disabled on the public endpoint to preserve this contract.
+Search results default to `drawer_id`, `source_path`, `room`, `section`, `chunk_index`, `chunk_count`, `text`, and `similarity`. Similarity is MemPalace's unboosted vector similarity, passed through unchanged: higher means a closer semantic match to the query, not a probability that the content is correct. A missing score (for example, a lexical-only hit) is `null`. Hybrid ranking may order results differently from this score. `verbose: true` adds the other backend scores and diagnostic metadata. Drawer retrieval and listings also support `verbose`. The alternate `cli_compatible` search output is disabled on the public endpoint to preserve this contract.
 
 MemPalace’s explicit no-token HTTP setting applies only inside Docker; Caddy is the public TLS boundary. The public entrypoint starts the MCP server directly, so the `serve` CLI cannot silently generate a replacement token. Qdrant and MemPalace have no host ports. Caddy certificates survive index rebuilds.
 

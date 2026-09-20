@@ -28,7 +28,7 @@ class PublicRetrievalTests(unittest.TestCase):
         self.catalogue = Catalogue(root, {'version': 1, 'documents': docs},
                                    lambda wing, room, path, i: f'{room}-{i}')
         self.hits = [{'drawer_id': f'{room}-0', 'text': 'Truncated upstream snippet',
-                      'distance': 0.2, 'effective_distance': 0.1, 'closet_preview': 'Redundant',
+                      'distance': 0.2, 'similarity': 0.8, 'effective_distance': 0.1, 'closet_preview': 'Redundant',
                       'source_path': f'/knowledge/{room}.md', 'filed_at': 'timestamp'}
                      for room in ('wormhole-b0', 'blackhole-a0')]
         self.result = {'query': 'NoC', 'results': self.hits, 'partial': True, 'warning': 'Backend warning'}
@@ -57,11 +57,19 @@ class PublicRetrievalTests(unittest.TestCase):
         self.assertEqual([r['drawer_id'] for r in compact['results']], [r['drawer_id'] for r in self.hits])
         for c, v in zip(compact['results'], verbose['results']):
             self.assertEqual(set(c), {'drawer_id', 'source_path', 'room', 'section',
-                                      'chunk_index', 'chunk_count', 'text'})
+                                      'chunk_index', 'chunk_count', 'text', 'similarity'})
+            self.assertEqual(c['similarity'], 0.8)
+            self.assertEqual(c['similarity'], v['similarity'])
             self.assertIn('Buddy bit is congestion adaptive.', c['text'])
             self.assertEqual(v['text'], c['text'])
             self.assertIn('distance', v)
         self.assertNotIn('room_warning', self.call('mempalace_search', query='NoC', room='wormhole-b0'))
+
+    def test_missing_vector_score_is_not_fabricated_from_rank_or_boost(self):
+        self.hits[0]['similarity'] = None
+        del self.hits[1]['similarity']
+        results = self.call('mempalace_search', query='NoC')['results']
+        self.assertTrue(all(hit['similarity'] is None for hit in results))
 
     def test_stale_drawer_fails_closed(self):
         self.hits[0]['drawer_id'] = 'stale'

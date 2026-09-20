@@ -58,7 +58,8 @@ async def test_retrieval(session, root):
         assert hits and all(hit['room'] == room and hit['source_path'] == source for hit in hits), hits
         match = next(hit for hit in hits if paragraph in hit['text'])
         assert all(set(hit) == {'drawer_id', 'source_path', 'room', 'section',
-                                'chunk_index', 'chunk_count', 'text'} for hit in hits)
+                                'chunk_index', 'chunk_count', 'text', 'similarity'} for hit in hits)
+        assert all(isinstance(hit['similarity'], (int, float)) and 0 <= hit['similarity'] <= 1 for hit in hits)
         drawer = await call('mempalace_get_drawer', drawer_id=match['drawer_id'])
         assert drawer['content'] == match['text']
         neighbor_id = drawer['previous_drawer_id'] or drawer['next_drawer_id']
@@ -69,6 +70,7 @@ async def test_retrieval(session, root):
         verbose = await call('mempalace_search', **args, verbose=True)
         assert [hit['drawer_id'] for hit in verbose['results']] == [hit['drawer_id'] for hit in hits]
         assert all('distance' in hit for hit in verbose['results'])
+        assert [hit['similarity'] for hit in verbose['results']] == [hit['similarity'] for hit in hits]
         compact_size, verbose_size = (len(json.dumps(result)) for result in (compact, verbose))
         assert compact_size < verbose_size
         # Room-only filtering must work independently of the source_path filter.

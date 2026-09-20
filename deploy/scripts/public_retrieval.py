@@ -27,6 +27,9 @@ def configure(server, catalogue=None):
                 compact = catalogue.chunk(hit['drawer_id'])
             except KeyError:
                 return {'error': 'Index and source catalogue are out of sync; cannot return trustworthy excerpts'}
+            # Preserve MemPalace's unboosted vector similarity, including null
+            # for lexical-only hits. Do not reinterpret ranking boosts as confidence.
+            compact['similarity'] = hit.get('similarity')
             hits.append(dict(hit, **compact) if verbose else compact)
         out['results'] = hits
         if not arguments.get('room') and len({hit['room'] for hit in hits}) > 1:
@@ -74,7 +77,9 @@ def configure(server, catalogue=None):
         'For architecture-specific questions set room (wormhole-b0 or blackhole-a0); '
         'use mempalace_list_rooms for all rooms. Before making claims about absence or exceptions, '
         'read the full source with mempalace_get_document(source_path). '
-        'Scores/diagnostic metadata require verbose=true.')
+        'Each hit includes MemPalace similarity: higher means closer semantic relevance, '
+        'not factual confidence; null means unavailable (e.g. a lexical-only hit). '
+        'Other scores/diagnostic metadata require verbose=true.')
     search_tool['input_schema']['properties']['room']['description'] = (
         'Exact room, e.g. wormhole-b0, blackhole-a0, isa-shared. Discover others with mempalace_list_rooms.')
     search_tool['input_schema']['properties']['cli_compatible']['const'] = False
