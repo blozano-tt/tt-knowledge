@@ -24,6 +24,5 @@ else:
     raise SystemExit(f"Qdrant did not become ready within 90s: {last_error}")
 PY
 
-# The index is rebuilt from an empty backend by deploy/rebuild-index.sh.
-# No init step is needed for project-mode mining; the source is read-only.
-exec mempalace mine /knowledge --wing tt-knowledge
+# The index is rebuilt from the prepared source/chunk manifest.
+exec python /opt/tt-knowledge/index-knowledge.py

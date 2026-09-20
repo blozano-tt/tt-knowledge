@@ -8,6 +8,7 @@ from jsonschema import Draft202012Validator
 PUBLIC_TOOLS = frozenset({
     "mempalace_search", "mempalace_get_drawer", "mempalace_list_drawers",
     "mempalace_list_wings", "mempalace_list_rooms", "mempalace_get_taxonomy",
+    "mempalace_get_document",
 })
 MAX_ACTIVE_REQUESTS = 4
 MAX_REQUEST_BYTES = 16 * 1024
@@ -29,7 +30,7 @@ def install(server):
         for key, prop in schema.get("properties", {}).items():
             if prop.get("type") == "string":
                 prop["maxLength"] = min(prop.get("maxLength", 2048), 2048)
-            if key == "offset":
+            if key == "offset" and name != "mempalace_get_document":
                 prop["maximum"] = 100000
             if key == "limit":
                 prop["maximum"] = 20 if name == "mempalace_search" else 100
@@ -75,5 +76,8 @@ def install(server):
 if __name__ == "__main__":
     import mempalace.mcp_server as server
 
+    from public_retrieval import configure
+
+    configure(server)
     install(server)
     server.main()

@@ -47,7 +47,7 @@ jobs:
       - name: Test public MCP policy
         run: |
           pip install jsonschema==4.26.0
-          python -m unittest discover -s deploy/tests -p 'test_public_mcp.py'
+          python -m unittest discover -s deploy/tests -p 'test_public*.py'
       - name: Test public proxy limits
         run: |
           trap 'docker compose -f deploy/tests/compose.yaml down -v' EXIT
@@ -58,7 +58,7 @@ jobs:
           DOMAIN: knowledge.example.com
         run: |
           bash -n deploy/rebuild-index.sh deploy/update.sh deploy/status.sh
-          python -m py_compile deploy/test-mcp.py deploy/scripts/public-mcp.py
+          python -m py_compile deploy/test-mcp.py deploy/scripts/*.py scripts/*.py
           node --check site/site.js
           docker compose -f deploy/compose.yaml config --quiet
           docker compose -f deploy/compose.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

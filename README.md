@@ -30,6 +30,12 @@ Upstream files remain unchanged. Deployment selects only registered Markdown and
 
 The remote MemPalace server runs with `--read-only`, so agents cannot add or mutate knowledge through MCP. Changes happen through Git commits/PRs, followed by a clean re-index.
 
+## Retrieving complete, architecture-specific sources
+
+Search with `room: "wormhole-b0"` or `room: "blackhole-a0"` for architecture-specific questions. `mempalace_list_rooms` discovers all rooms; shared ISA documents use `isa-shared`. Routing follows source directories, not mentions of other architectures in the prose.
+
+Search returns complete Markdown blocks with compact provenance. Use `mempalace_get_document(source_path)` to read the exact original pinned document, especially before making claims about missing features or exceptions. Follow `next_offset` for paginated documents. `mempalace_get_drawer(drawer_id)` supplies neighboring drawer IDs for local context. Search, drawer retrieval, and drawer listings accept `verbose: true` for backend diagnostic metadata; the default omits it.
+
 ## Quick start
 
 1. Add verified local Markdown using `tt-knowledge/_templates/topic.md`, or register a pinned upstream source following [UPSTREAM.md](UPSTREAM.md).

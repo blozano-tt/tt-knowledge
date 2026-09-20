@@ -120,7 +120,7 @@ Other remote MCP clients use the same URL with Streamable HTTP and no authentica
 
 ### End-to-end MCP test
 
-Run this from a checkout with `DOMAIN` in `deploy/.env`:
+Run this from the deployed checkout, with its prepared `.build` corpus and `DOMAIN` in `deploy/.env`:
 
 ```bash
 python3 -m venv /tmp/tt-knowledge-mcp-test
@@ -129,6 +129,8 @@ python3 -m venv /tmp/tt-knowledge-mcp-test
 ```
 
 The test uses the official MCP client against the public HTTPS endpoint. It checks the public landing page and assets, TLS/health, connects without credentials, checks the public tool allowlist, blocks private routes and oversized requests, verifies that write and administrative calls are refused, performs semantic search, and fetches indexed `SFPMUL` content from both Wormhole and Blackhole at the pinned ISA revision. Failures return a nonzero exit status. Its JSON report contains retrieval evidence. Use `--report /path/to/report.json` to save it.
+
+Retrieval regressions also verify the populated taxonomy against the build manifest, both NoC flit widths with architecture filters, the complete congestion-adaptive buddy-bit paragraph in search results, neighboring chunk traversal, byte-exact full-source recovery, and compact versus verbose responses.
 
 ## Static website
 
@@ -188,12 +190,25 @@ The defaults in `deploy/nginx.conf` are:
 | Request body | 16 KiB |
 | Search results | 20 per call |
 | Drawer listing | 100 per call |
+| Full-document page | 65,536 Unicode characters |
 
 Rate limits use Nginx’s leaky-bucket accounting, not fixed minute windows. Clients behind the same office or VPN address share an IP quota. Nginx returns HTTP **429** and `Retry-After: 5` when a rate or concurrency limit is hit. Agents should retry with exponential backoff. These limits protect ordinary VM capacity; they do not provide upstream protection against a large bandwidth flood.
 
 The public entrypoint additionally limits actual backend dispatch to four active requests, retaining each slot until the work finishes even if a client disconnects. Exhaustion there returns a JSON-RPC “Server busy” error. Proxy timeouts do not cancel backend work. JSON-RPC batches are rejected, argument schemas are enforced, and string lengths and pagination are bounded.
 
-Only these tools are advertised and accepted: `mempalace_search`, `mempalace_get_drawer`, `mempalace_list_drawers`, `mempalace_list_wings`, `mempalace_list_rooms`, and `mempalace_get_taxonomy`. Writes, maintenance, diary, sync, and agent-coordination tools are unavailable. The underlying server also runs with `--read-only`. Changes to the corpus happen through Git.
+Only these tools are advertised and accepted: `mempalace_search`, `mempalace_get_drawer`, `mempalace_get_document`, `mempalace_list_drawers`, `mempalace_list_wings`, `mempalace_list_rooms`, and `mempalace_get_taxonomy`. Writes, maintenance, diary, sync, and agent-coordination tools are unavailable. The underlying server also runs with `--read-only`. Changes to the corpus happen through Git.
+
+### Retrieval contract
+
+The build creates a source manifest containing SHA-256 digests, exact chunk offsets, pinned source URLs, and rooms. The indexer and MCP adapter share this manifest. Mining must produce exactly the expected drawer IDs, contents, and rooms or deployment fails. A successful verification records the manifest fingerprint in the palace state. The query service refuses to start without a matching fingerprint. Rebuild the index when changing chunk boundaries or routing.
+
+Markdown headings start sections. Paragraphs, tables, and fenced code stay intact, with a soft 1,600-character packing target. Oversized blocks stay whole; blocks over 65,536 characters fail preparation so they can be split editorially. Search is still selective retrieval: an excerpt is not evidence that an unreturned fact does not exist. Long indivisible blocks can also exceed an embedding model's input window, so full-source access remains important.
+
+`mempalace_get_document` reads only prepared, digest-verified sources using the exact `source_path` returned by search. It cannot read arbitrary VM files or fetch URLs. The default page is 65,536 characters; `complete: true` means the entire document is present. Otherwise follow `next_offset` until null and concatenate the content. `source_url` links to the original pinned file. `mempalace_get_drawer` returns a complete chunk with `previous_drawer_id` and `next_drawer_id` from the same document.
+
+Upstream rooms are explicit path-prefix mappings in `upstream-sources.json`; local article rooms follow their top-level catalogue folder. The ISA source uses `wormhole-b0`, `blackhole-a0`, and `isa-shared`. Query the taxonomy tools to discover current counts. Unfiltered search warns when results span rooms.
+
+Search results default to `drawer_id`, `source_path`, `room`, `section`, `chunk_index`, `chunk_count`, and `text`. `verbose: true` adds backend scores and diagnostic metadata. Drawer retrieval and listings also support `verbose`. The alternate `cli_compatible` search output is disabled on the public endpoint to preserve this contract.
 
 MemPalace’s explicit no-token HTTP setting applies only inside Docker; Caddy is the public TLS boundary. The public entrypoint starts the MCP server directly, so the `serve` CLI cannot silently generate a replacement token. Qdrant and MemPalace have no host ports. Caddy certificates survive index rebuilds.
 
@@ -204,7 +219,8 @@ Gateway access logs are disabled. Docker logs for each long-running service rota
 Unit tests require `jsonschema` (also present in the pinned MemPalace image):
 
 ```bash
-python -m unittest discover -s deploy/tests -p 'test_public_mcp.py'
+python -m unittest discover -s scripts/tests
+python -m unittest discover -s deploy/tests -p 'test_public*.py'
 ```
 
 The proxy integration tests use the production Caddy/Nginx configurations with a disposable backend, no public ports, and no production volumes. They check rate and concurrency limits, spoofed IP headers, request size, and route isolation:

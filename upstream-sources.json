@@ -4,7 +4,18 @@
       "path": "tt-knowledge/upstream/tt-isa-documentation",
       "repository": "https://github.com/tenstorrent/tt-isa-documentation.git",
       "reason": "Tenstorrent-maintained primary ISA documentation. Source approval does not imply individual verification of every statement.",
-      "include": ["README.md", "Glossary.md", "WormholeB0/**", "BlackholeA0/**", "Miscellaneous/**"]
+      "include": [
+        "README.md",
+        "Glossary.md",
+        "WormholeB0/**",
+        "BlackholeA0/**",
+        "Miscellaneous/**"
+      ],
+      "default_room": "isa-shared",
+      "rooms": {
+        "WormholeB0": "wormhole-b0",
+        "BlackholeA0": "blackhole-a0"
+      }
     }
   ]
 }

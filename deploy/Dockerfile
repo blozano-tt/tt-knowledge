@@ -21,3 +21,7 @@ COPY --chown=1000:1000 .build/licenses/ /opt/tt-knowledge/licenses/
 COPY --chown=1000:1000 .build/sources.json /opt/tt-knowledge/sources.json
 COPY --chown=1000:1000 deploy/scripts/wait-and-mine.sh /opt/tt-knowledge/wait-and-mine.sh
 COPY --chown=1000:1000 deploy/scripts/public-mcp.py /opt/tt-knowledge/public-mcp.py
+COPY --chown=1000:1000 .build/documents.json /opt/tt-knowledge/documents.json
+COPY --chown=1000:1000 scripts/knowledge_catalog.py /opt/tt-knowledge/knowledge_catalog.py
+COPY --chown=1000:1000 deploy/scripts/index-knowledge.py /opt/tt-knowledge/index-knowledge.py
+COPY --chown=1000:1000 deploy/scripts/public_retrieval.py /opt/tt-knowledge/public_retrieval.py

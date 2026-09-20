@@ -59,6 +59,7 @@ def load_sources(root: Path = ROOT) -> list[dict]:
             file = checkout / name
             if file.is_symlink() or not file.is_file() or not file.resolve().is_relative_to(checkout.resolve()):
                 raise ValueError(f"Source document must be a regular file within its checkout: {file}")
+            source_room(source, name)  # Validate routing before preparing any build input.
             source["files"].append(name)
         if not source["files"]:
             raise ValueError(f"Source has no selected Markdown: {path}")
@@ -76,3 +77,23 @@ def indexed_path(source: dict, name: str) -> Path:
     # that path preserves revision and architecture even on later document chunks.
     repository = source["repository"].removeprefix("https://").removesuffix(".git")
     return Path("upstream") / repository / "blob" / source["revision"] / name
+
+
+def source_room(source: dict, name: str) -> str:
+    """Route by explicit directory prefixes, never by another architecture's prose."""
+    rooms = source.get("rooms", {})
+    room = source.get("default_room", Path(source["path"]).name)
+    matches = []
+    for value in [room, *rooms.values()]:
+        if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,127}", value):
+            raise ValueError(f"Invalid room name: {value}")
+    for prefix, value in rooms.items():
+        if not prefix or prefix.startswith("/") or any(p in {"", ".", ".."} for p in prefix.split("/")):
+            raise ValueError(f"Invalid room path prefix: {prefix}")
+        if name.startswith(prefix + "/"):
+            matches.append((len(prefix), value))
+    if matches:
+        room = max(matches)[1]
+    if not isinstance(room, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,127}", room):
+        raise ValueError(f"Invalid room name: {room}")
+    return room

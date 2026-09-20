@@ -5,10 +5,17 @@ repository's Git submodule entry. Their existing structure is preserved; they do
 not need to fit the local hardware, software, and glossary buckets.
 
 `upstream-sources.json` registers each source's HTTPS repository URL, trust
-rationale, and include patterns. Only matching tracked `.md` files are indexed.
+rationale, include patterns, and optional room routing. Only matching tracked `.md` files are indexed.
 Patterns use Python `fnmatch` semantics, where `*` can match directory separators.
 Source approval means we trust this publisher for the stated subject; it does not
 mean every statement has been individually checked by this repository's authors.
+
+Use `rooms` to map source directory prefixes to stable room names and
+`default_room` for other selected files. For example, the ISA catalogue maps
+`WormholeB0` to `wormhole-b0` and `BlackholeA0` to `blackhole-a0`, with
+`isa-shared` as the default. The longest matching directory prefix wins.
+Routing never examines prose. Without explicit configuration, the upstream
+checkout's directory name is the room; room names must be lowercase slugs.
 
 ## Add a source
 
@@ -67,10 +74,11 @@ To cite an upstream result, replace `/knowledge/upstream/` with `https://` and
 URL-encode any spaces or other special characters in the path. The resulting
 GitHub URL identifies the exact source revision. The original architecture path
 is preserved; never transfer Wormhole B0 behavior to Blackhole A0 without evidence.
-This is path-based provenance, not a custom MCP citation field.
+Full-document and drawer retrieval also return a pinned `source_url` directly.
 
 The image also includes `/opt/tt-knowledge/sources.json` with the selected files,
-repository URLs, and revisions, and upstream license notices under
+repository URLs, and revisions, `/opt/tt-knowledge/documents.json` with source
+digests, rooms, and Markdown chunk boundaries, and upstream license notices under
 `/opt/tt-knowledge/licenses/`. These administrative files are not mined. Linked
 diagrams and other non-Markdown assets remain accessible in the upstream repo but
 are not indexed by this pipeline.

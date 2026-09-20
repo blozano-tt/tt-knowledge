@@ -287,7 +287,7 @@
                   </li>
                   <li>
                     Look for <code>mempalace_search</code> and
-                    <code>mempalace_get_drawer</code> in its available tools.
+                    <code>mempalace_get_document</code> in its available tools.
                   </li>
                 </ol>
                 <p>
@@ -311,7 +311,11 @@
               <p id="agent-prompt">
                 For Tenstorrent technical questions, consult the
                 blozano-tt/tt-knowledge catalogue first. Retrieve relevant
-                documents and cite their sources. For upstream documents,
+                documents and cite their sources. For architecture-specific
+                questions, discover rooms with mempalace_list_rooms and filter
+                searches by room. Use mempalace_get_document(source_path) to
+                check the full source before claiming a feature or exception is
+                absent; search excerpts may omit relevant context. For upstream documents,
                 preserve the original repository and revision in citations. If
                 the catalogue does not cover the question, say so and consult
                 other sources.

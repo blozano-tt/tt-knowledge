@@ -2,6 +2,8 @@
 """End-to-end HTTPS smoke test; install test dependencies from requirements-test.txt."""
 import argparse
 import asyncio
+from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -20,6 +22,67 @@ def unpack(result):
     if "error" in data:
         raise RuntimeError(data["error"])
     return data
+
+
+async def test_retrieval(session, root):
+    """Check the public contract against exact prepared sources, not model answers."""
+    manifest = json.loads((root / '.build/documents.json').read_text())['documents']
+    expected_rooms = Counter()
+    for doc in manifest.values():
+        expected_rooms[doc['room']] += len(doc['chunks'])
+
+    async def call(name, **args):
+        # Leave room for protocol traffic under the shared-IP request quota.
+        await asyncio.sleep(0.6)
+        return unpack(await session.call_tool(name, args))
+
+    rooms = await call('mempalace_list_rooms', wing='tt-knowledge')
+    assert rooms['rooms'] == dict(expected_rooms), rooms
+    taxonomy = await call('mempalace_get_taxonomy')
+    assert taxonomy['taxonomy'] == {'tt-knowledge': dict(expected_rooms)}, taxonomy
+    report = {'rooms': rooms['rooms'], 'noc_regressions': []}
+    for arch, room, width in (('WormholeB0', 'wormhole-b0', '256 bits'),
+                              ('BlackholeA0', 'blackhole-a0', '512 bits')):
+        source = next(path for path in manifest if path.endswith(f'/{arch}/NoC/README.md'))
+        original = (root / '.build/knowledge' / source.removeprefix('/knowledge/')).read_bytes().decode()
+        document = await call('mempalace_get_document', source_path=source)
+        assert document['complete'] and document['next_offset'] is None
+        assert document['content'] == original
+        assert document['sha256'] == hashlib.sha256(original.encode()).hexdigest()
+        assert width in document['content']
+        paragraph = next(p for p in original.split('\n\n') if 'buddy bit can change' in p)
+        args = {'query': 'buddy bit changes at each hop in response to network congestion',
+                'room': room, 'source_file': source, 'limit': 5}
+        compact = await call('mempalace_search', **args)
+        hits = compact['results']
+        assert hits and all(hit['room'] == room and hit['source_path'] == source for hit in hits), hits
+        match = next(hit for hit in hits if paragraph in hit['text'])
+        assert all(set(hit) == {'drawer_id', 'source_path', 'room', 'section',
+                                'chunk_index', 'chunk_count', 'text'} for hit in hits)
+        drawer = await call('mempalace_get_drawer', drawer_id=match['drawer_id'])
+        assert drawer['content'] == match['text']
+        neighbor_id = drawer['previous_drawer_id'] or drawer['next_drawer_id']
+        assert neighbor_id
+        neighbor = await call('mempalace_get_drawer', drawer_id=neighbor_id)
+        assert neighbor['source_path'] == source
+        assert abs(neighbor['chunk_index'] - drawer['chunk_index']) == 1
+        verbose = await call('mempalace_search', **args, verbose=True)
+        assert [hit['drawer_id'] for hit in verbose['results']] == [hit['drawer_id'] for hit in hits]
+        assert all('distance' in hit for hit in verbose['results'])
+        compact_size, verbose_size = (len(json.dumps(result)) for result in (compact, verbose))
+        assert compact_size < verbose_size
+        # Room-only filtering must work independently of the source_path filter.
+        widths = await call('mempalace_search', query='NoC flit width bits', room=room, limit=5)
+        assert widths['results'] and all(hit['room'] == room for hit in widths['results'])
+        assert any(width in hit['text'] for hit in widths['results']), widths
+        report['noc_regressions'].append({'room': room, 'flit_width': width,
+                                         'congestion_paragraph': 'complete', 'full_source': 'byte-exact UTF-8',
+                                         'neighbors': 'passed', 'compact_chars': compact_size,
+                                         'verbose_chars': verbose_size})
+    # An unknown source is a tool-level error and cannot trigger an arbitrary file/URL fetch.
+    denied = await session.call_tool('mempalace_get_document', {'source_path': '/etc/passwd'})
+    assert 'Unknown source_path' in str(denied.content)
+    return report
 
 
 async def test(env_file):
@@ -63,7 +126,8 @@ async def test(env_file):
                 tools = await session.list_tools()
                 names = {tool.name for tool in tools.tools}
                 assert names == {"mempalace_search", "mempalace_get_drawer", "mempalace_list_drawers",
-                                 "mempalace_list_wings", "mempalace_list_rooms", "mempalace_get_taxonomy"}
+                                 "mempalace_list_wings", "mempalace_list_rooms", "mempalace_get_taxonomy",
+                                 "mempalace_get_document"}
                 report["advertised_tools"] = len(names)
                 for name in ("mempalace_add_drawer", "mempalace_reconnect", "mempalace_event_wait"):
                     # Empty arguments cannot create a drawer if protection regresses.
@@ -102,6 +166,7 @@ async def test(env_file):
                                                "source": hit["source_path"],
                                                "drawer_id": hit["drawer_id"],
                                                "excerpt": hit["text"][:350]})
+                report['retrieval_contract'] = await test_retrieval(session, root)
     report["result"] = "passed"
     return report
 
