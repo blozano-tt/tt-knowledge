@@ -43,6 +43,10 @@ printf '\n==> Building tt-knowledge MemPalace image (%s)\n' "$GIT_SHA"
 "${COMPOSE[@]}" build --pull mempalace
 
 printf '\n==> Stopping query service while the truth index is rebuilt\n'
+# Restart the gateway after mining so its health state starts fresh. Leaving it
+# running against the absent backend makes Compose reject the recovered stack
+# before the gateway's next periodic health check can mark it healthy again.
+"${COMPOSE[@]}" stop gateway >/dev/null 2>&1 || true
 "${COMPOSE[@]}" stop mempalace >/dev/null 2>&1 || true
 "${COMPOSE[@]}" rm -f mempalace >/dev/null 2>&1 || true
 "${COMPOSE[@]}" stop qdrant >/dev/null 2>&1 || true
