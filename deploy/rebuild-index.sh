@@ -5,6 +5,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 git submodule sync --recursive
 git submodule update --init --recursive
 python3 scripts/prepare_knowledge.py
+# The gateway runs as UID 101, including on checkouts created with umask 077.
+chmod 0644 deploy/nginx.conf
 COMPOSE=(docker compose -f deploy/compose.yaml --env-file deploy/.env)
 "${COMPOSE[@]}" pull postgres hindsight ingest gateway caddy
 "${COMPOSE[@]}" up -d --wait --wait-timeout 600 postgres hindsight

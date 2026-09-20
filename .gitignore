@@ -9,6 +9,7 @@ deploy/.env
 .idea/
 
 # Python
+.venv-test/
 __pycache__/
 *.pyc
 
