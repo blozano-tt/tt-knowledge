@@ -37,12 +37,20 @@ The deployment is portable to a Linux ARM64 or x86-64 VM with Docker Engine, the
 
 - `/mcp` and `/mcp/` expose the fixed `tt-knowledge` bank and only `recall`, `get_document`, `list_documents`. Hindsight's native tool allowlist enforces this; no custom dispatcher is involved.
 - `/healthz` reports API health.
-- `/` serves Hindsight's native administration UI. Caddy requires HTTP Basic authentication over HTTPS for **all** UI pages, assets, and UI API routes. The admin account can change data; do not share it with MCP consumers.
+- `/` serves the public landing page, with setup instructions and an Admin dashboard button. Its static assets are under `/landing/`.
+- `/dashboard` opens Hindsight's native administration UI. Caddy requires HTTP Basic authentication over HTTPS for **all** UI pages, assets, and UI API routes. The admin account can change data; do not share it with MCP consumers.
 - Direct REST API paths and arbitrary MCP bank paths are blocked. PostgreSQL, Hindsight, and Nginx have no host port mappings. TLS terminates at Caddy.
 - Nginx limits MCP to 120 requests/minute per IP (burst 30), 300/minute globally (burst 50), 2 simultaneous requests per IP, 4 globally, and 16 KiB request bodies. Hindsight additionally limits concurrent recalls to 2 and reranks at most 32/64/96 candidates for low/mid/high budgets. These native settings trade retrieval depth for latency on the 2-CPU VM. HTTP 429 includes `Retry-After: 5`. Caddy overwrites forwarding headers to prevent IP spoofing. These are bounded resource controls, not a promise of protection against every denial-of-service attack.
 - Access logging is disabled in Nginx and not enabled in Caddy. Hindsight logs at warning level; errors may still contain request-related information. Requests necessarily send query text to this VM. Docker logs rotate at 10 MiB × 3 files per long-running service. No transcript ingestion is configured.
 
-The root dashboard replaces the previous custom static homepage. Connection instructions live in the repository README.
+The public landing page is served directly by Caddy from `site/`. Hindsight remains unmodified and uses its normal routes; only the landing page and its explicitly listed assets bypass dashboard authentication.
+
+For a landing-page or proxy-only update, pull the repository and recreate Caddy without rebuilding the knowledge bank:
+
+```bash
+git pull --ff-only --recurse-submodules
+docker compose -f deploy/compose.yaml --env-file deploy/.env up -d --no-deps --force-recreate caddy
+```
 
 ## Git-owned bank and updates
 

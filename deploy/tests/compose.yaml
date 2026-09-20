@@ -25,6 +25,7 @@ services:
     depends_on: [gateway]
     volumes:
       - ../Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../site:/srv:ro
   test:
     image: python:3.12-alpine
     profiles: [tools]

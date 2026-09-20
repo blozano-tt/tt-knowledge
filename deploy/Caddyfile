@@ -1,6 +1,19 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	@landing path / /index.html /landing/styles.css /landing/site.js /landing/favicon.svg
+	handle @landing {
+		root * /srv
+		uri strip_prefix /landing
+		header {
+			Content-Security-Policy "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy no-referrer
+			Cache-Control no-cache
+		}
+		file_server
+	}
+
 	@public_mcp path /mcp /mcp/ /healthz
 	handle @public_mcp {
 		reverse_proxy gateway:8080 {

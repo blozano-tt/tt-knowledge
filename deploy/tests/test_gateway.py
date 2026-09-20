@@ -43,7 +43,14 @@ class Backend(BaseHTTPRequestHandler):
 
 class GatewayTests(unittest.TestCase):
     def test_1_routes_and_body_limit(self):
-        for path in ('/', '/api/banks', '/api/banks.json', '/_next/static/test.js'):
+        status, _, html = call('caddy:80', '/', None)
+        self.assertEqual(status, 200)
+        self.assertIn(b'Admin dashboard', html)
+        self.assertIn(b'href="/dashboard"', html)
+        for path in ('/index.html', '/landing/styles.css', '/landing/site.js', '/landing/favicon.svg'):
+            self.assertEqual(call('caddy:80', path, None)[0], 200)
+        self.assertEqual(call('caddy:80', '/landing/private', None)[0], 401)
+        for path in ('/dashboard', '/api/banks', '/api/banks.json', '/_next/static/test.js'):
             self.assertEqual(call('caddy:80', path, None)[0], 401)
             self.assertEqual(call('caddy:80', path, None, admin=True)[0], 200)
         self.assertEqual(call("caddy:80", "/healthz", None)[2], b"ok\n")

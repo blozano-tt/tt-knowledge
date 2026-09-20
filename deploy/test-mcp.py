@@ -27,7 +27,12 @@ async def test(args):
     report = {'endpoint': args.url, 'documents_expected': len(manifest)}
     if not args.skip_proxy_checks:
         async with httpx2.AsyncClient(timeout=120) as client:
-            for path in ('/', '/api/banks', '/api/banks.json', '/_next/static/test.js'):
+            landing = await client.get(base + '/')
+            assert landing.status_code == 200 and 'Admin dashboard' in landing.text
+            for asset in ('styles.css', 'site.js', 'favicon.svg'):
+                assert (await client.get(base + '/landing/' + asset)).status_code == 200
+            report['public_landing'] = 'HTML and assets accessible without login'
+            for path in ('/dashboard', '/api/banks', '/api/banks.json', '/_next/static/test.js'):
                 response = await client.get(base + path)
                 assert response.status_code == 401, (path, response.status_code)
             for path in ('/v1/default/banks', '/mcp/other-bank/', '/docs', '/openapi.json'):
@@ -36,7 +41,7 @@ async def test(args):
             assert (await client.post(args.url, content=b'x' * 16385)).status_code == 413
             if args.admin_password_file:
                 auth = httpx2.BasicAuth('admin', args.admin_password_file.read_text().strip())
-                page = await client.get(base + '/', auth=auth, follow_redirects=True)
+                page = await client.get(base + '/dashboard', auth=auth, follow_redirects=True)
                 assert page.status_code == 200 and 'text/html' in page.headers['content-type']
                 banks = await client.get(base + '/api/banks', auth=auth)
                 assert banks.status_code == 200 and 'tt-knowledge' in banks.text, banks.status_code

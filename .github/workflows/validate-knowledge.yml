@@ -24,6 +24,7 @@ jobs:
           python -m unittest discover -s scripts/tests
           python -m unittest discover -s deploy/tests -p 'test_ingest.py'
           bash -n deploy/*.sh
+          node --check site/site.js
           python -m py_compile deploy/test-mcp.py deploy/scripts/*.py scripts/*.py
       - name: Test actual public proxy configuration
         env:

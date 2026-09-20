@@ -45,7 +45,7 @@ The bank is disposable and rebuilt from the current Git checkout. The importer v
 
 ## Dashboard and deployment
 
-[tt-knowledge.dev](https://tt-knowledge.dev/) serves Hindsight's built-in **administration dashboard**, protected by a separate username/password. Public agents do not need those credentials. The UI can perform administrative writes; Git remains the durable source of truth, and rebuilds discard manual changes to the `tt-knowledge` bank.
+[tt-knowledge.dev](https://tt-knowledge.dev/) introduces the catalogue and guides agents through setup. Its **Admin dashboard** button opens [Hindsight's built-in administration UI](https://tt-knowledge.dev/dashboard), protected by a separate username/password. Public agents do not need those credentials. The UI can perform administrative writes; Git remains the durable source of truth, and rebuilds discard manual changes to the `tt-knowledge` bank.
 
 See [`deploy/README.md`](deploy/README.md) for Docker Compose setup, updates, internal VM deployment, and end-to-end tests. On the server, `./deploy/update.sh` recursively updates the checkout, validates sources, and rebuilds the bank.
 
