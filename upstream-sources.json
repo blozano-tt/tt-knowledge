@@ -11,10 +11,19 @@
         "BlackholeA0/**",
         "Miscellaneous/**"
       ],
-      "default_room": "isa-shared",
-      "rooms": {
-        "WormholeB0": "wormhole-b0",
-        "BlackholeA0": "blackhole-a0"
+      "tags": [
+        "source:tt-isa-documentation"
+      ],
+      "default_tags": [
+        "scope:isa-shared"
+      ],
+      "path_tags": {
+        "WormholeB0": [
+          "arch:wormhole-b0"
+        ],
+        "BlackholeA0": [
+          "arch:blackhole-a0"
+        ]
       }
     }
   ]

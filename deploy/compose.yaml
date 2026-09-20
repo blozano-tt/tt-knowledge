@@ -1,151 +1,135 @@
 name: tt-knowledge
 
-x-mempalace-environment: &mempalace-environment
-  MEMPALACE_BACKEND: qdrant
-  MEMPALACE_QDRANT_URL: http://qdrant:6333
-  MEMPALACE_QDRANT_NAMESPACE: tt-knowledge
-  MEMPALACE_EMBEDDING_DEVICE: cpu
-
-x-mempalace-volumes: &mempalace-volumes
-  - mempalace-state:/data
-  # Keep downloaded embedding models across clean state rebuilds.
-  - mempalace-cache:/data/.cache
-
-x-bounded-logging: &bounded-logging
+x-logging: &logging
   driver: json-file
   options:
-    max-size: "10m"
-    max-file: "3"
+    max-size: '10m'
+    max-file: '3'
 
 services:
-  # Repair mount-point ownership for existing volumes as well as fresh installs.
-  # Application processes continue to run as the image's non-root user.
-  volume-init:
-    image: tt-knowledge-mempalace:local
-    profiles: [tools]
-    user: "0:0"
-    network_mode: none
-    entrypoint: ["chown", "1000:1000", "/data", "/data/.cache"]
-    volumes: *mempalace-volumes
-
-  qdrant:
-    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.19.1}
+  postgres:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:0.8.2-pg17}
     restart: unless-stopped
-    logging: *bounded-logging
+    logging: *logging
+    environment:
+      POSTGRES_USER: hindsight
+      POSTGRES_DB: hindsight
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run deploy/setup.sh first}
     volumes:
-      - qdrant-data:/qdrant/storage
-    networks:
-      - backend
-
-  # One-shot tool. It is intentionally not started by a normal `compose up`.
-  # deploy/rebuild-index.sh invokes it only after wiping MemPalace/Qdrant state.
-  indexer:
-    image: tt-knowledge-mempalace:local
-    profiles: [tools]
-    depends_on:
-      - qdrant
-    entrypoint: ["/bin/sh", "/opt/tt-knowledge/wait-and-mine.sh"]
-    environment:
-      <<: *mempalace-environment
-    volumes: *mempalace-volumes
-    networks:
-      - backend
-      # Allow the initial embedding-model download.
-      - edge
-
-  mempalace:
-    image: tt-knowledge-mempalace:local
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        MEMPALACE_IMAGE: ${MEMPALACE_IMAGE:-ghcr.io/mempalace/mempalace:3.10.0}
-        GIT_SHA: ${GIT_SHA:-unknown}
-    restart: unless-stopped
-    logging: *bounded-logging
-    depends_on:
-      - qdrant
-    entrypoint: ["python", "/opt/tt-knowledge/public-mcp.py"]
-    command:
-      - --transport
-      - http
-      - --host
-      - "0.0.0.0"
-      - --port
-      - "8765"
-      - --backend
-      - qdrant
-      - --read-only
-    environment:
-      <<: *mempalace-environment
-      # Public access is bounded by the gateway and the retrieval-only entrypoint.
-      MEMPALACE_MCP_HTTP_ALLOW_INSECURE_NO_TOKEN: "1"
-      MEMPALACE_MCP_HTTP_TOKEN: ""
-      MEMPALACE_MCP_EXTRA_ALLOWED_HOSTS: ${DOMAIN:?set DOMAIN in deploy/.env}
-      MEMPALACE_MCP_IDLE_HOURS: "0"
-    expose:
-      - "8765"
-    volumes: *mempalace-volumes
-    networks:
-      - backend
-      - edge
+      - postgres-data:/var/lib/postgresql/data
+    networks: [backend]
     healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8765/healthz').read().strip()==b'ok' else sys.exit(1)"
-      interval: 30s
+      test: [CMD-SHELL, 'pg_isready -U hindsight -d hindsight']
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 20
+    stop_grace_period: 45s
+
+  hindsight:
+    # Stock upstream image. No custom application build or runtime patches.
+    image: ${HINDSIGHT_IMAGE:-ghcr.io/vectorize-io/hindsight:0.10.0}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      HINDSIGHT_API_DATABASE_URL: postgresql://hindsight:${POSTGRES_PASSWORD}@postgres:5432/hindsight
+      HINDSIGHT_API_LLM_PROVIDER: none
+      HINDSIGHT_API_RETAIN_EXTRACTION_MODE: chunks
+      HINDSIGHT_API_STORE_DOCUMENT_TEXT: 'true'
+      HINDSIGHT_API_ENABLE_OBSERVATIONS: 'false'
+      HINDSIGHT_API_ENABLE_TEMPORAL_RETRIEVAL: 'false'
+      HINDSIGHT_API_ENABLE_GRAPH_RETRIEVAL: 'false'
+      HINDSIGHT_API_MCP_ENABLED_TOOLS: recall,get_document,list_documents
+      HINDSIGHT_API_MCP_STATELESS: 'true'
+      HINDSIGHT_API_MCP_INSTRUCTIONS: >-
+        This bank is the public blozano-tt/tt-knowledge catalogue.
+        Recall finds candidate chunks; use each result's document_id with get_document
+        to read the original Markdown before answering. Cite metadata.source_url.
+        For architecture-specific questions use tags [arch:wormhole-b0] or [arch:blackhole-a0]
+        with tags_match=all_strict. Shared ISA documents use scope:isa-shared.
+        Never infer absence or lack of exceptions from a retrieved chunk alone.
+      HINDSIGHT_API_RECALL_MAX_CONCURRENT: '2'
+      HINDSIGHT_API_RETAIN_MAX_CONCURRENT: '1'
+      HINDSIGHT_API_EMBEDDINGS_LOCAL_FORCE_CPU: 'true'
+      HINDSIGHT_API_RERANKER_LOCAL_FORCE_CPU: 'true'
+      HINDSIGHT_API_RERANKER_LOCAL_MAX_CONCURRENT: '1'
+      # Bound cross-encoder work on the 2-CPU VM using upstream configuration.
+      HINDSIGHT_API_RERANKER_MAX_CANDIDATES: '64'
+      HINDSIGHT_API_RERANKER_MAX_CANDIDATES_LOW: '32'
+      HINDSIGHT_API_RERANKER_MAX_CANDIDATES_HIGH: '96'
+      HINDSIGHT_API_WORKER_ID: tt-knowledge
+      HINDSIGHT_API_LOG_LEVEL: warning
+      # The entire dashboard is protected by Caddy's HTTP authentication.
+      HINDSIGHT_CP_DATAPLANE_API_URL: http://127.0.0.1:8888
+    volumes:
+      - model-cache:/home/hindsight/.cache
+    networks: [backend, edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python3, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8888/health", timeout=5)']
+      interval: 10s
+      timeout: 10s
+      start_period: 180s
+      retries: 10
+    stop_grace_period: 45s
+
+  ingest:
+    image: python:3.12-alpine
+    profiles: [tools]
+    entrypoint: [python, /scripts/ingest.py]
+    environment:
+      HINDSIGHT_URL: http://hindsight:8888
+    volumes:
+      - ../.build:/corpus:ro
+      - ./scripts/ingest.py:/scripts/ingest.py:ro
+    networks: [backend]
+    depends_on:
+      hindsight:
+        condition: service_healthy
 
   gateway:
     image: ${NGINX_IMAGE:-nginx:1.30.5-alpine}
     restart: unless-stopped
-    logging: *bounded-logging
-    user: "101:101"
-    entrypoint: ["nginx", "-g", "daemon off;"]
+    logging: *logging
+    user: '101:101'
+    entrypoint: [nginx, -g, 'daemon off;']
     read_only: true
     tmpfs:
       - /tmp:size=32m,mode=1777
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    depends_on:
-      mempalace:
-        condition: service_healthy
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      - ingress
-      - backend
+    networks: [ingress, backend]
+    depends_on:
+      hindsight:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
-      interval: 30s
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 10s
       timeout: 10s
       retries: 3
 
   caddy:
     image: ${CADDY_IMAGE:-caddy:2-alpine}
     restart: unless-stopped
-    logging: *bounded-logging
+    logging: *logging
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
+      UI_PASSWORD_HASH: ${UI_PASSWORD_HASH:?run deploy/setup.sh first}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge, ingress, backend]
     depends_on:
       gateway:
         condition: service_healthy
-    environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../site:/srv:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    networks:
-      - edge
-      - ingress
 
 networks:
   ingress:
@@ -155,12 +139,10 @@ networks:
   edge:
 
 volumes:
-  qdrant-data:
-    name: tt-knowledge-qdrant-data
-  mempalace-state:
-    name: tt-knowledge-mempalace-state
-  mempalace-cache:
-    name: tt-knowledge-mempalace-cache
+  postgres-data:
+    name: tt-knowledge-hindsight-postgres
+  model-cache:
+    name: tt-knowledge-hindsight-model-cache
   caddy-data:
     name: tt-knowledge-caddy-data
   caddy-config:

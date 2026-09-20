@@ -1,25 +1,25 @@
 {$DOMAIN} {
 	encode zstd gzip
 
-	@website path / /index.html /styles.css /site.js /favicon.svg
-	handle @website {
-		root * /srv
-		header {
-			Content-Security-Policy "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
-			X-Content-Type-Options nosniff
-			Referrer-Policy no-referrer
-			Cache-Control "no-cache"
-		}
-		file_server
-	}
-
-	@public_api path /mcp /healthz
-	handle @public_api {
+	@public_mcp path /mcp /mcp/ /healthz
+	handle @public_mcp {
 		reverse_proxy gateway:8080 {
 			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
-	handle {
+
+	# Do not expose Hindsight's REST API or arbitrary bank endpoints.
+	@private_api path /v1/* /mcp/* /docs /docs/* /openapi.json
+	handle @private_api {
 		respond "Not found" 404
+	}
+
+	# The official dashboard includes administrative write operations. Protect
+	# every page, asset, and UI API route at the proxy boundary.
+	handle {
+		basic_auth {
+			admin {$UI_PASSWORD_HASH}
+		}
+		reverse_proxy hindsight:9999
 	}
 }

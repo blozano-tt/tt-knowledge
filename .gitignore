@@ -12,5 +12,6 @@ deploy/.env
 __pycache__/
 *.pyc
 
-# Validated Docker build input; regenerated before each build.
+# Validated ingestion input; regenerated before each index rebuild.
 .build/
+deploy/admin-password.txt

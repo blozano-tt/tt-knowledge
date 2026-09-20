@@ -1,6 +1,6 @@
 name: tt-knowledge-limits-test
 services:
-  mempalace:
+  hindsight:
     image: python:3.12-alpine
     command: [python, /tests/test_gateway.py, backend]
     volumes:
@@ -14,17 +14,17 @@ services:
       - /tmp:size=32m,mode=1777
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    depends_on: [mempalace]
+    depends_on: [hindsight]
     volumes:
       - ../nginx.conf:/etc/nginx/nginx.conf:ro
   caddy:
     image: ${CADDY_IMAGE:-caddy:2-alpine}
     environment:
       DOMAIN: http://caddy
+      UI_PASSWORD_HASH: ${UI_PASSWORD_HASH:?set a test bcrypt hash}
     depends_on: [gateway]
     volumes:
       - ../Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../../site:/srv:ro
   test:
     image: python:3.12-alpine
     profiles: [tools]

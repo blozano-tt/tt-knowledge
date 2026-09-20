@@ -2,26 +2,8 @@ name: Validate knowledge corpus
 
 on:
   pull_request:
-    paths:
-      - 'tt-knowledge/**'
-      - 'scripts/**'
-      - 'deploy/**'
-      - 'site/**'
-      - 'upstream-sources.json'
-      - '.gitmodules'
-      - '.dockerignore'
-      - '.github/workflows/validate-knowledge.yml'
   push:
     branches: [main]
-    paths:
-      - 'tt-knowledge/**'
-      - 'scripts/**'
-      - 'deploy/**'
-      - 'site/**'
-      - 'upstream-sources.json'
-      - '.gitmodules'
-      - '.dockerignore'
-      - '.github/workflows/validate-knowledge.yml'
 
 permissions:
   contents: read
@@ -36,30 +18,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate verified metadata
-        run: python scripts/prepare_knowledge.py
-      - name: Validate Docker build inputs
-        # A small base exercises every COPY and the build-context allowlist.
-        # The full pinned MemPalace image is tested during deployment.
-        run: docker build -f deploy/Dockerfile --build-arg MEMPALACE_IMAGE=python:3.12-alpine -t tt-knowledge-build-check .
-      - name: Test upstream source validation
-        run: python -m unittest discover -s scripts/tests
-      - name: Test public MCP policy
+      - name: Validate approved sources and ingestion failure handling
         run: |
-          pip install jsonschema==4.26.0
-          python -m unittest discover -s deploy/tests -p 'test_public*.py'
-      - name: Test public proxy limits
-        run: |
-          trap 'docker compose -f deploy/tests/compose.yaml down -v' EXIT
-          docker compose -f deploy/tests/compose.yaml up -d mempalace gateway caddy
-          docker compose -f deploy/tests/compose.yaml run --rm test
-      - name: Validate deployment configuration
+          python scripts/prepare_knowledge.py
+          python -m unittest discover -s scripts/tests
+          python -m unittest discover -s deploy/tests -p 'test_ingest.py'
+          bash -n deploy/*.sh
+          python -m py_compile deploy/test-mcp.py deploy/scripts/*.py scripts/*.py
+      - name: Test actual public proxy configuration
         env:
           DOMAIN: knowledge.example.com
+          POSTGRES_PASSWORD: disposable-test-password
         run: |
-          bash -n deploy/rebuild-index.sh deploy/update.sh deploy/status.sh
-          python -m py_compile deploy/test-mcp.py deploy/scripts/*.py scripts/*.py
-          node --check site/site.js
+          export UI_PASSWORD_HASH="$(printf '%s\n' 'test-password' | docker run --rm -i caddy:2-alpine caddy hash-password --algorithm bcrypt --bcrypt-cost 4)"
           docker compose -f deploy/compose.yaml config --quiet
           docker compose -f deploy/compose.yaml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
           docker compose -f deploy/compose.yaml run --rm --no-deps --entrypoint nginx gateway -t
+          trap 'docker compose -f deploy/tests/compose.yaml down -v' EXIT
+          docker compose -f deploy/tests/compose.yaml up -d hindsight gateway caddy
+          docker compose -f deploy/tests/compose.yaml run --rm test

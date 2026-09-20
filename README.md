@@ -1,59 +1,58 @@
 # tt-knowledge
 
-A curated source of factual Tenstorrent knowledge, exposed to agents through a read-only MemPalace MCP server.
+A curated catalogue of public Tenstorrent knowledge, served to agents by Hindsight's native read-only MCP tools.
 
-Visit [tt-knowledge.dev](https://tt-knowledge.dev/) for an introduction, source links, and agent connection instructions. The MCP endpoint is `https://tt-knowledge.dev/mcp`; no authentication is required. Public access is read-only and rate limited.
+[`blozano-tt/tt-knowledge`](https://github.com/blozano-tt/tt-knowledge) is this project's primary knowledge catalogue and source of truth. It combines human-reviewed local Markdown with registered, pinned upstream catalogues. [`tenstorrent/tt-isa-documentation`](https://github.com/tenstorrent/tt-isa-documentation) is one upstream catalogue, not the scope of the project. Imported documents retain their original attribution.
 
-[`blozano-tt/tt-knowledge`](https://github.com/blozano-tt/tt-knowledge) is the primary knowledge catalogue and source of truth for this project. It brings together curated local articles and registered upstream catalogues. `tenstorrent/tt-isa-documentation` is one such upstream catalogue; its current coverage does not define the scope of tt-knowledge. Imported documents retain their original attribution and provenance.
+## Connect an agent
 
-MemPalace is only the retrieval layer. The deployed index is intentionally disposable and is rebuilt from scratch from the Markdown under [`tt-knowledge/`](tt-knowledge/) whenever the corpus changes.
+Configure a remote **Streamable HTTP** MCP server:
 
-## Repository layout
+```json
+{
+  "mcpServers": {
+    "tt-knowledge": {
+      "url": "https://tt-knowledge.dev/mcp"
+    }
+  }
+}
+```
+
+Client configuration formats vary. The URL needs **no bearer token**. Access is anonymous, read-only, and rate limited. Clients should back off on HTTP 429. After migrating from MemPalace, reconnect or refresh the tool list; old tool names are gone.
+
+Only three native Hindsight tools are exposed:
+
+1. `recall(query, ...)` finds relevant source chunks and their `document_id`.
+2. `get_document(document_id)` returns the retained original Markdown in `original_text`.
+3. `list_documents(...)` browses the bank's sources.
+
+**Read the full original before answering**, particularly when a claim depends on exceptions or the absence of a feature. Search excerpts alone are incomplete evidence. Cite the pinned `source_url` from result metadata or `document_metadata`.
+
+For architecture-specific recall, use `tags: ["arch:wormhole-b0"]` or `tags: ["arch:blackhole-a0"]` with `tags_match: "all_strict"`. Shared ISA documents use `scope:isa-shared`. Tags come from source directories, not inferred prose.
+
+## How it works
 
 ```text
-tt-knowledge/
-├── tt-knowledge/          # human-reviewed Markdown corpus
-├── deploy/                # Docker Compose deployment
-├── site/                  # public static website served by Caddy
-├── scripts/               # repository validation
-└── .github/               # review/validation policy
+Verified Markdown + pinned Git submodules
+    → documented retain API, one complete file per document
+    → Hindsight native chunks + local embeddings in PostgreSQL
+    → native recall → document_id → native get_document → original Markdown
 ```
 
-## Trust model
+Deployment uses the unmodified official Hindsight image. `LLM_PROVIDER=none` and `RETAIN_EXTRACTION_MODE=chunks` disable LLM extraction and generated knowledge; local CPU models provide embeddings and reranking. This repository supplies source validation, ordinary API ingestion, and proxy configuration. It does not replace Hindsight's chunker, ranking, MCP server, or response metadata.
 
-The corpus contains two kinds of material:
+The bank is disposable and rebuilt from the current Git checkout. The importer verifies that every stored original exactly matches its input. Neither generated knowledge pages nor session transcripts enter the corpus.
 
-- **Local articles** declare `verified_by`, `verified_on`, and `sources` in front matter.
-- **Approved upstream repositories** live as pinned Git submodules under `tt-knowledge/upstream/`. [`upstream-sources.json`](upstream-sources.json) records their origin, trust rationale, and selected document paths. Approving a source does not claim that every upstream statement was individually verified here.
+## Dashboard and deployment
 
-Upstream files remain unchanged. Deployment selects only registered Markdown and keeps repository, commit, and original path in each indexed filename. Architecture directories such as `WormholeB0` and `BlackholeA0` remain distinct. Templates, Git metadata, and repository administration files are excluded from the searchable corpus. See [upstream source management](UPSTREAM.md).
+[tt-knowledge.dev](https://tt-knowledge.dev/) serves Hindsight's built-in **administration dashboard**, protected by a separate username/password. Public agents do not need those credentials. The UI can perform administrative writes; Git remains the durable source of truth, and rebuilds discard manual changes to the `tt-knowledge` bank.
 
-The remote MemPalace server runs with `--read-only`, so agents cannot add or mutate knowledge through MCP. Changes happen through Git commits/PRs, followed by a clean re-index.
+See [`deploy/README.md`](deploy/README.md) for Docker Compose setup, updates, internal VM deployment, and end-to-end tests. On the server, `./deploy/update.sh` recursively updates the checkout, validates sources, and rebuilds the bank.
 
-## Retrieving complete, architecture-specific sources
+## Contributing knowledge
 
-Search with `room: "wormhole-b0"` or `room: "blackhole-a0"` for architecture-specific questions. `mempalace_list_rooms` discovers all rooms; shared ISA documents use `isa-shared`. Routing follows source directories, not mentions of other architectures in the prose.
+- Local articles use [`tt-knowledge/_templates/topic.md`](tt-knowledge/_templates/topic.md) and declare `verified_by`, `verified_on`, and `sources`.
+- Upstream catalogues are approved in [`upstream-sources.json`](upstream-sources.json), with repository provenance, selected paths, and optional tags. Approval trusts the publisher for the stated subject; it does not claim individual verification of every statement.
+- Follow [UPSTREAM.md](UPSTREAM.md) to register or update a source. Recursive checkout preserves each recorded submodule revision.
 
-Search returns complete Markdown blocks with compact provenance. Use `mempalace_get_document(source_path)` to read the exact original pinned document, especially before making claims about missing features or exceptions. Follow `next_offset` for paginated documents. `mempalace_get_drawer(drawer_id)` supplies neighboring drawer IDs for local context. Search, drawer retrieval, and drawer listings accept `verbose: true` for backend diagnostic metadata; the default omits it.
-
-## Quick start
-
-1. Add verified local Markdown using `tt-knowledge/_templates/topic.md`, or register a pinned upstream source following [UPSTREAM.md](UPSTREAM.md).
-2. Configure and deploy using [`deploy/README.md`](deploy/README.md).
-3. Enable a GitHub ruleset for `main` that requires pull requests and CODEOWNERS approval if you want review enforcement rather than convention alone.
-
-## Updating production
-
-For website-only changes, follow the [static site update instructions](deploy/README.md#static-website) to avoid rebuilding the knowledge index.
-
-On the server:
-
-```bash
-./deploy/update.sh
-```
-
-That fast-forwards the checkout, rebuilds the MemPalace image, destroys the old MemPalace/Qdrant state, mines the current corpus from scratch, and restarts the read-only MCP endpoint. The embedding-model cache and Caddy TLS certificates are preserved.
-
-## Why full rebuilds?
-
-For this repository, stale historical facts are worse than re-indexing cost. MemPalace is designed as a memory system and has supported retaining or synchronizing prior versions over time. `tt-knowledge` deliberately uses a stronger invariant: the live index is derived only from the current Git checkout.
+Templates, Git metadata, and repository administration files are excluded from ingestion. Changes reach the public service through Git and a rebuild. Enable GitHub rulesets requiring review/CODEOWNERS if review enforcement is desired.

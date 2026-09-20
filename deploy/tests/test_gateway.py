@@ -3,18 +3,21 @@
 from concurrent.futures import ThreadPoolExecutor
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import base64
 import json
+import threading
 import sys
 import time
 import unittest
 
 
-def call(host="gateway:8080", path="/mcp", body=b"{}", ip="192.0.2.1"):
+def call(host="gateway:8080", path="/mcp", body=b"{}", ip="192.0.2.1", admin=False):
     client = HTTPConnection(host, timeout=10)
     try:
         client.request("POST" if body is not None else "GET", path, body,
                        {"Content-Type": "application/json", "X-Real-IP": ip,
-                        "X-Forwarded-For": ip})
+                        "X-Forwarded-For": ip,
+                        **({"Authorization": "Basic " + base64.b64encode(b"admin:test-password").decode()} if admin else {})})
         response = client.getresponse()
         return response.status, dict(response.getheaders()), response.read()
     finally:
@@ -35,18 +38,23 @@ class Backend(BaseHTTPRequestHandler):
         time.sleep(json.loads(body).get("hold", 0))
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b'{}')
+        self.wfile.write(json.dumps({'path': self.path, 'bank_header': self.headers.get('X-Bank-Id')}).encode())
 
 
 class GatewayTests(unittest.TestCase):
     def test_1_routes_and_body_limit(self):
-        self.assertEqual(call("caddy:80", "/", None)[0], 200)
+        for path in ('/', '/api/banks', '/api/banks.json', '/_next/static/test.js'):
+            self.assertEqual(call('caddy:80', path, None)[0], 401)
+            self.assertEqual(call('caddy:80', path, None, admin=True)[0], 200)
         self.assertEqual(call("caddy:80", "/healthz", None)[2], b"ok\n")
-        for path in ("/statusz", "/sync/status", "/logstream/stream", "/not-public"):
-            for host in ("caddy:80", "gateway:8080"):
-                self.assertEqual(call(host, path, None)[0], 404)
+        for path in ('/v1/default/banks', '/mcp/other-bank/', '/docs', '/openapi.json'):
+            self.assertEqual(call('caddy:80', path, None)[0], 404)
+        self.assertEqual(call('gateway:8080', '/private', None)[0], 404)
         self.assertEqual(call(body=b"x" * 16385)[0], 413)
-        self.assertEqual(call("caddy:80")[0], 200)
+        for path in ('/mcp', '/mcp/'):
+            status, _, body = call('caddy:80', path)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)['path'], '/mcp/tt-knowledge/')
 
     def test_2_per_ip_concurrency(self):
         with ThreadPoolExecutor(max_workers=2) as pool:
@@ -80,7 +88,8 @@ class GatewayTests(unittest.TestCase):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "backend":
-        ThreadingHTTPServer(("0.0.0.0", 8765), Backend).serve_forever()
+        threading.Thread(target=ThreadingHTTPServer(('0.0.0.0', 9999), Backend).serve_forever, daemon=True).start()
+        ThreadingHTTPServer(("0.0.0.0", 8888), Backend).serve_forever()
     else:
         for attempt in range(30):
             try:

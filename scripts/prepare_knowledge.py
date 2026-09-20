@@ -1,59 +1,60 @@
 #!/usr/bin/env python3
-"""Prepare a Markdown-only Docker corpus with stable upstream provenance."""
-
+"""Copy approved Markdown and prepare native Hindsight retain metadata."""
+import hashlib
 import json
 import shutil
-import re
+from urllib.parse import quote
 
-from upstream_sources import ROOT, indexed_path, load_sources, source_room, git
-from knowledge_catalog import document_record
+from upstream_sources import ROOT, git, indexed_path, load_sources, source_tags
 from validate_knowledge import indexed_markdown_files, main as validate
 
+CATALOGUE = 'https://github.com/blozano-tt/tt-knowledge'
 
-def prepare() -> None:
-    root = ROOT
+
+def prepare():
     if validate():
-        raise SystemExit("Corpus validation failed; refusing to prepare the Docker image")
-    sources = load_sources(root)
-    output = root / ".build"
+        raise SystemExit('Corpus validation failed')
+    sources = load_sources()
+    output = ROOT / '.build'
     if output.exists():
         shutil.rmtree(output)
-    corpus = output / "knowledge"
-    corpus.mkdir(parents=True)
-    count = 0
-    documents = {}
-    revision = git(root, "rev-parse", "HEAD")
-    for file in indexed_markdown_files():
-        target = corpus / file.relative_to(ROOT / "tt-knowledge")
+    (output / 'knowledge').mkdir(parents=True)
+    (output / 'licenses').mkdir()
+    documents = []
+
+    def add(file, relative, source_url, tags):
+        target = output / 'knowledge' / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(file, target)
-        relative = file.relative_to(ROOT / "tt-knowledge")
-        room = re.sub(r"[^a-z0-9-]+", "-", relative.parts[0].lower()) if len(relative.parts) > 1 else "local"
-        documents["/knowledge/" + relative.as_posix()] = document_record(
-            file.read_bytes().decode("utf-8"), room,
-            f"https://github.com/blozano-tt/tt-knowledge/blob/{revision}/tt-knowledge/{relative.as_posix()}")
-        count += 1
+        raw = file.read_bytes()
+        raw.decode('utf-8')  # Reject invalid text before touching the live bank.
+        source_path = '/knowledge/' + relative.as_posix()
+        documents.append({
+            'document_id': hashlib.sha256(source_path.encode()).hexdigest(),
+            'file': target.relative_to(output).as_posix(), 'tags': tags,
+            'metadata': {'catalogue_repository': CATALOGUE, 'source_path': source_path,
+                         'source_url': source_url, 'sha256': hashlib.sha256(raw).hexdigest()}})
+
+    revision = git(ROOT, 'rev-parse', 'HEAD')
+    for file in indexed_markdown_files():
+        relative = file.relative_to(ROOT / 'tt-knowledge')
+        add(file, relative, f'{CATALOGUE}/blob/{revision}/tt-knowledge/{quote(relative.as_posix())}',
+            ['source:tt-knowledge', 'category:' + (relative.parts[0].lower() if len(relative.parts) > 1 else 'local')])
     for source in sources:
-        checkout = root / source["path"]
-        for name in source["files"]:
-            target = corpus / indexed_path(source, name)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(checkout / name, target)
-            documents["/knowledge/" + indexed_path(source, name).as_posix()] = document_record(
-                (checkout / name).read_bytes().decode("utf-8"), source_room(source, name),
-                f"{source['repository'].removesuffix('.git')}/blob/{source['revision']}/{name}")
-            count += 1
-        # Preserve upstream license notices in the image, outside searchable text.
-        licenses = output / "licenses" / checkout.name
-        licenses.mkdir(parents=True, exist_ok=True)
-        for file in checkout.glob("LICENSE*"):
+        checkout = ROOT / source['path']
+        for name in source['files']:
+            add(checkout / name, indexed_path(source, name),
+                f"{source['repository'].removesuffix('.git')}/blob/{source['revision']}/{quote(name)}",
+                source_tags(source, name))
+        licenses = output / 'licenses' / checkout.name
+        licenses.mkdir()
+        for file in checkout.glob('LICENSE*'):
             if file.is_file() and not file.is_symlink():
                 shutil.copy2(file, licenses / file.name)
-    (output / "licenses").mkdir(exist_ok=True)
-    (output / "documents.json").write_text(json.dumps({"version": 1, "documents": documents}, indent=2) + "\n")
-    (output / "sources.json").write_text(json.dumps(sources, indent=2) + "\n")
-    print(f"Prepared {count} Markdown documents from {len(sources)} upstream source(s) plus local articles.")
+    (output / 'documents.json').write_text(json.dumps(documents, indent=2) + '\n')
+    (output / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
+    print(f'Prepared {len(documents)} original documents; chunking is performed by Hindsight.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     prepare()

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from upstream_sources import indexed_path, load_sources
+from upstream_sources import indexed_path, load_sources, source_tags
 
 
 def git(root, *args):
@@ -74,6 +74,23 @@ class UpstreamSourcesTest(unittest.TestCase):
             "https://github.com/another/isa.git")
         with self.assertRaisesRegex(ValueError, "differs"):
             load_sources(self.root)
+
+
+    def test_native_tags_use_longest_directory_prefix_not_prose(self):
+        source = {'tags': ['source:isa'], 'default_tags': ['scope:shared'],
+                  'path_tags': {'WormholeB0': ['arch:wormhole-b0'],
+                                'WormholeB0/NoC': ['arch:wormhole-b0', 'topic:noc']}}
+        self.assertEqual(source_tags(source, 'WormholeB0/NoC/README.md'),
+                         ['arch:wormhole-b0', 'source:isa', 'topic:noc'])
+        self.assertEqual(source_tags(source, 'WormholeB0Other/README.md'),
+                         ['scope:shared', 'source:isa'])
+
+    def test_invalid_tag_configuration_is_rejected(self):
+        for source in ({'tags': 'not-an-array'}, {'tags': ['']},
+                       {'path_tags': {'../outside': ['tag']}},
+                       {'path_tags': {'/absolute': ['tag']}}):
+            with self.subTest(source=source), self.assertRaises(ValueError):
+                source_tags(source, 'README.md')
 
 
 if __name__ == "__main__":

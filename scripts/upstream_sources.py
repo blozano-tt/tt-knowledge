@@ -59,7 +59,7 @@ def load_sources(root: Path = ROOT) -> list[dict]:
             file = checkout / name
             if file.is_symlink() or not file.is_file() or not file.resolve().is_relative_to(checkout.resolve()):
                 raise ValueError(f"Source document must be a regular file within its checkout: {file}")
-            source_room(source, name)  # Validate routing before preparing any build input.
+            source_tags(source, name)  # Validate routing before preparing any build input.
             source["files"].append(name)
         if not source["files"]:
             raise ValueError(f"Source has no selected Markdown: {path}")
@@ -73,27 +73,26 @@ def load_sources(root: Path = ROOT) -> list[dict]:
 
 
 def indexed_path(source: dict, name: str) -> Path:
-    # The miner stores source_file on every chunk. Encoding the canonical URL in
-    # that path preserves revision and architecture even on later document chunks.
+    # Keep revision and architecture visible in the prepared source path.
     repository = source["repository"].removeprefix("https://").removesuffix(".git")
     return Path("upstream") / repository / "blob" / source["revision"] / name
 
 
-def source_room(source: dict, name: str) -> str:
-    """Route by explicit directory prefixes, never by another architecture's prose."""
-    rooms = source.get("rooms", {})
-    room = source.get("default_room", Path(source["path"]).name)
+def source_tags(source: dict, name: str) -> list[str]:
+    """Apply configured provenance/architecture tags at ingestion through the public API."""
+    mappings = source.get("path_tags", {})
+    if not isinstance(mappings, dict):
+        raise ValueError("path_tags must be a directory-to-tags mapping")
+    base = source.get("tags", [])
+    default = source.get("default_tags", [])
+    for tags in [base, default, *mappings.values()]:
+        if not isinstance(tags, list) or any(not isinstance(t, str) or not t or len(t) > 128 for t in tags):
+            raise ValueError("Source tags must be lists of nonempty strings up to 128 characters")
     matches = []
-    for value in [room, *rooms.values()]:
-        if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,127}", value):
-            raise ValueError(f"Invalid room name: {value}")
-    for prefix, value in rooms.items():
+    for prefix, tags in mappings.items():
         if not prefix or prefix.startswith("/") or any(p in {"", ".", ".."} for p in prefix.split("/")):
-            raise ValueError(f"Invalid room path prefix: {prefix}")
+            raise ValueError(f"Invalid tag path prefix: {prefix}")
         if name.startswith(prefix + "/"):
-            matches.append((len(prefix), value))
-    if matches:
-        room = max(matches)[1]
-    if not isinstance(room, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,127}", room):
-        raise ValueError(f"Invalid room name: {room}")
-    return room
+            matches.append((len(prefix), tags))
+    selected = max(matches, key=lambda item: item[0])[1] if matches else default
+    return sorted(set(base + selected))
