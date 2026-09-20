@@ -36,7 +36,7 @@ async def test(args):
             assert (await client.post(args.url, content=b'x' * 16385)).status_code == 413
             if args.admin_password_file:
                 auth = httpx2.BasicAuth('admin', args.admin_password_file.read_text().strip())
-                page = await client.get(base + '/', auth=auth)
+                page = await client.get(base + '/', auth=auth, follow_redirects=True)
                 assert page.status_code == 200 and 'text/html' in page.headers['content-type']
                 banks = await client.get(base + '/api/banks', auth=auth)
                 assert banks.status_code == 200 and 'tt-knowledge' in banks.text, banks.status_code
